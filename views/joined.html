@@ -1,0 +1,2259 @@
+{{!< layout/default}}
+
+{{#extend "css"}}
+<style>
+.info-box {
+    box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2);
+    border-radius: .25rem;
+    padding: .5rem;
+    min-height: 80px;
+    background: #fff;
+    display: flex!important; 
+}
+.info-box-icon {
+    border-radius: .25rem;
+    display: block;
+    width: 90px;
+    text-align: center;
+    font-size: 40px;
+    color: #fff!important;
+}
+.btn-outline-dark {
+    color: #2974bf;
+    border-color: #4876a5;
+}
+.modal-lg {
+max-width: 1000px;
+}
+.modal-dialog {
+    margin: 0 auto;
+}
+.modal-header {
+    padding: 0.6rem;
+}
+.card-header{
+    background-color: #9dacea;
+    color:#333333;
+    padding: 0.2rem 1.25rem;
+  }
+h5, .h5 {
+    font-size: 1.25rem;
+    margin-bottom: 0rem;
+}
+.btn-block {
+    color: azure;
+}
+.btn-warning:disabled {
+    color: #fff;
+    background-color: #FF7518;
+    border-color: #FF7518;
+}
+.btn-warning {
+    color: #fff;
+    background-color: #FF7518;
+    border-color: #FF7518;
+}
+.btn-warning:hover{
+    color: #fff;
+    background-color: #e46814;
+    border-color: #e46814;
+}
+.custom-checkbox .custom-control-input:disabled:checked ~ .custom-control-label::before {
+    background-color: #2780e3;
+}
+.custom-control-input:disabled ~ .custom-control-label::before {
+    background-color: #618db9;
+}
+   
+</style>
+
+
+{{/extend}}
+
+
+
+<!--Menu Botones-->
+<div class="container-fluid">
+<div class="tab-content">
+    <div class="tab-pane fade show active" style="margin-left:10px;margin-right:10px" id="#" role="tabpanel" aria-labelledby="enables-tab">
+        <div class="row">
+                <div class="col-md-2 col-xs-12">
+                <button class="btn btn-secondary btn-block" id="agregarEstudiante">
+                    <i style="color:#1abc9c;" class="fa fa-plus" aria-hidden="true" ></i> Agregar
+                </button>
+                <button class="btn btn-secondary btn-block" id="enrolledEstudiante" disabled>
+                    <i style="color:#3498db;" class="fas fa-book"></i> Matricular
+                </button>
+                <button class="btn btn-secondary btn-block" id="modEstudiante" disabled>
+                    <i style="color:#f1c40f;" class="fas fa-edit"></i> Modificar
+                </button>
+                <button class="btn btn-secondary btn-block" id="EliminarEstudiante" disabled>
+                    <i style="color:#e74c3c;" class="fas fa-trash-alt"></i> Eliminar
+                </button>
+            </div>
+    
+            <div class="col-md-10 col-xs-12 box-shadows table-responsive">
+                <table id="table" class="display nowrap table table-condensed" cellspacing="0" width="100%">
+                    <thead>
+                        <tr>
+                            <!--<th></th>-->
+                            <th>Rut</th>
+                            <th>Nombre</th>
+                            <th>Apellidos</th>
+                            <th></th>
+                            <th>Domicilio</th>
+                            <th>E-mail</th>
+                            <th>Celular</th>
+                            <th>Apoderado</th>
+                            <th>Parentesco</th>
+                        </tr>
+                    </thead>
+                </table>
+                <div id="loadingStudents">
+                    <center>
+                        <i style="color:#3498db;" class="fa fa-spinner fa-pulse fa-2x fa-fw"></i>
+                        <span class="sr-only">Cargando...</span>
+                    </center>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 
+</div>
+<!-- Modal formato-->
+<div class="modal fade" id="modalEstudiantes" tabindex="-1" role="dialog" aria-labelledby="modal_title" >
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content" style="background-color: #ffffff">
+            <div class="modal-header" style="background:#333333; color:#fff">
+                <h5 class="modal-title" id="modal_title"></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="modal_body"></div>
+            <div class="modal-footer" id="modal_footer"></div>
+        </div>
+    </div>
+</div>
+
+
+{{#extend "js"}}
+<script>
+  
+   
+    let selects = {
+        graduated: [],
+        notgraduated: [],
+        selectedOptionEg: []
+    }
+   
+
+    let allValues={
+        valorMatricula:0,
+        cantidadCuotas:0,
+        montoPorCuota:0,
+        totalCuotas:0,
+        montoTotal:0,
+        montoPorCuota2:0,
+        descuentoCuota1:0,
+        descuentoCuota2:0
+    }
+    
+    let numberQuotes ={};
+    let valores = {};
+    let typePayStatus = 0;//tipo de pago: 0 cuotas 1 contado
+    let statusBeca = 0;
+    let estudianteDelete;
+    let defaultModalHTML = '';
+    let datatable;
+    let datatableAlumnos;
+    let alumosRowSelectedData;
+    let alumnosRowSelected;
+    let average = 'normal';
+    let chequeStatus = 0;
+    jQuery(document).ready(function ($) {
+        chargeTableAlumnos();
+    });
+       
+    function chargeTableAlumnos() {
+        datatableAlumnos = $('#table')
+        .DataTable({            
+                    "iDisplayLength": 100,
+                    "oLanguage": {
+                        "sSearch": "Buscar :"
+                    },
+                    "responsive": true,
+                    "columns": [
+                        /*{"defaultContent": "<button type='button' class='see1 btn btn-outline-info btn-sm' title='Información adicional'> <i class='fas fa-chart-bar' style=' width: 14px'></i></button>"},*/
+                        { "data": "_id"},
+                        { "data": "name" },
+                        { "data": "lastname1"},
+                        { "data": "lastname2"},
+                        { "data": "address"},
+                        { "data": "email"},
+                        { "data": "phone"},
+                        { "data": "nameAp"},
+                        { "data": "relationshipAp"}               
+                    ],
+                initComplete: function (settings, json) {
+                    ajax({
+                        url: 'api/studentsCebal'
+                    }).then(res => {
+                        if (res.err) {
+                            toastr.warning('No existen Alumnos')
+                            $('#loadingStudents').empty();
+                        } else {
+                            console.log(res)
+
+                            let reformat = res.reduce((arr, el, i) => {
+                                return arr.concat({
+                                    _id: rutFunc(el._id),
+                                    name: el.name,
+                                    lastname1: el.lastname1,
+                                    lastname2: el.lastname2,
+                                    address: el.address,
+                                    email: el.email,
+                                    phone: el.phone,
+                                    nameAp: el.nameAp,
+                                    relationshipAp: el.relationshipAp
+                                })   
+                            }, []);
+
+                            datatableAlumnos.rows.add(reformat).draw();
+                            $('#loadingStudents').empty();
+                        }      
+                    })
+            }
+        });   
+        
+        /*$('#table tbody').on('click', 'button.see1', function (){
+            //var data_see1 = datatableAlumnos.row($(this).parents("tr")).data();
+         alert("Ver puntajes")
+        } ); */
+
+
+     $('#table tbody').on('click', 'tr', function () {
+        if ($(this).hasClass('selected')) {
+            $(this).removeClass('selected');
+            $('#enrolledEstudiante').prop('disabled', true);
+            $('#modEstudiante').prop('disabled', true);
+            $('#EliminarEstudiante').prop('disabled', true);
+        } else {
+            datatableAlumnos.$('tr.selected').removeClass('selected');
+            $(this).addClass('selected');
+            alumosRowSelectedData = datatableAlumnos.row($(this)).data();
+            alumnosRowSelected = datatableAlumnos.row($(this));
+            console.log(alumosRowSelectedData)
+            $('#enrolledEstudiante').prop('disabled', false);
+            $('#modEstudiante').prop('disabled', false);
+            $('#EliminarEstudiante').prop('disabled', false);
+        }
+    });
+}
+//reload matricula
+function reloadRepairTableAlumnos2() {
+        ajax({
+            url: 'api/studentsCebal'
+        }).then(res => {
+            console.log(res)
+            if (res.err) {
+                toastr.warning('No existen alumnos')
+            } else {
+                datatableAlumnos.clear().draw();
+                datatableAlumnos.rows.add(res).draw();
+            }
+        })
+}
+//DATATABLE FINAL recargar
+function reloadRepairTableAlumnos() {
+    ajax({
+        url: 'api/studentsCebal'
+    }).then(res => {
+        if (res.err) {
+            toastr.warning('No existen Alumnos')
+            datatableAlumnos.clear().draw();
+            $('#loadingStudents').empty();
+        } else {
+            let reformat = res.reduce((arr, el, i) => {
+                return arr.concat({
+                    _id: rutFunc(el._id),
+                    name: el.name,
+                    lastname1: el.lastname1,
+                    lastname2: el.lastname2,
+                    address: el.address,
+                    email: el.email,
+                    phone: el.phone,
+                    nameAp: el.nameAp,
+                    relationshipAp: el.relationshipAp
+                })   
+            }, []);
+
+            datatableAlumnos.clear().draw();
+            datatableAlumnos.rows.add(reformat).draw();
+            $('#loadingStudents').empty();
+        }
+    })
+}
+//MATRICULAR UN ALUMNO
+function modalMatrAlumnos() { 
+    chequeStatus = 0;
+    console.log(alumosRowSelectedData)
+      $('#modalEstudiantes').modal();
+      $('#modal_title').text('Ingresar matrícula');
+      $('#modal_body').html(`
+      <div class="row">
+        <div class="col-md-4">
+            <label style="float:left;"><i class="fa fa-user"></i> Nombre</label>
+            <input id="modName" type="text" value="${alumosRowSelectedData.name}"  required class="form-control border-input" readOnly>
+        </div>
+        <div class="col-md-4">
+            <label style="float:left;"><i class="fa fa-key"></i> Rut</label>
+            <input id="modRut" type="text" value="${alumosRowSelectedData._id}"  required class="form-control border-input" readOnly>
+        </div>
+        </div>
+        <div class="card" style="margin-top:5px">
+                <div class="card-header"><h5>Datos académicos</h5></div>
+            <div class="card-body row">
+                <div style="padding:5px;"> 
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label style="float:left;"><i class="fas fa-school"></i> Colegio *</label>
+                            <input id="matrColegio" type="text" onkeyup="aMays(event, this)" onblur="aMays(event, this)" required class="form-control border-input" placeholder="Ingrese nombre colegio">
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label><i class="far fa-calendar"></i> Egreso *</label>
+                                <select class="form-control" id="matrEgreso">
+                                    <option>Egresado</option>
+                                    <option>No egresado</option>
+                                </select> 
+                            </div>  
+                        </div>
+                        <div class="col-md-4">
+                            <label style="float:left;"><i class="fab fa-bimobject"></i> Becado *</label>
+                            <select class="form-control" id="matrBeca">
+                                <option>No</option>
+                                <option>Si</option>       
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label><i class="far fa-calendar-check"></i> Año de egreso <span id="matrEgresadoStatus">*</span></label>
+                                <select class="form-control" id="matrAñoEgreso">
+                                    <option selected="true" disabled="disabled">seleccione</option>
+                                    <option>2010</option>
+                                    <option>2011</option>
+                                    <option>2012</option>
+                                    <option>2013</option>
+                                    <option>2014</option>
+                                    <option>2015</option>
+                                    <option>2016</option>
+                                    <option>2017</option>
+                                    <option>2018</option>
+                                </select> 
+                            </div>  
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label><i class="fas fa-graduation-cap"></i> Cursando <span id="matrNoEgresadoStatus">*</span></label>
+                                <select class="form-control" id="matrCurso" disabled>
+                                    <option selected="true" disabled="disabled">seleccione</option>
+                                    <option>Primero medio</option>
+                                    <option>Segundo medio</option>
+                                    <option>Tercero medio</option>
+                                    <option>Cuarto medio</option>
+                                </select> 
+                            </div>  
+                        </div>
+                        <div class="col-md-4">
+                            <label><i class="fas fa-book"></i> Promedio *</label>
+                            <input id="matrPromedio" maxlength="2" type="text" class="form-control border-input solo-numero"  placeholder="Ej: 60">
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label ><i class="far fa-calendar-alt"></i> Horario *</label>
+                                <select id="selectHorario">
+                                    <option></option>
+                                </select>
+                            </div>  
+                        </div>
+
+                         <div class="col-md-3">
+                            <div class="form-group">
+                                <label><i class="fas fa-graduation-cap"></i>ETP *</label>
+                                <select class="form-control" id="etp">
+                                    <option>Sí</option>
+                                    <option>No</option>
+                                </select> 
+                            </div>  
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label><i class="fas fa-graduation-cap"></i>Prueba electiva</label>
+                                <select class="form-control" id="matrElectivo">
+                                    <option selected="true" disabled="disabled">seleccione</option>
+                                    <option disabled>Ciencias</option>
+                                    <option disabled>Historia</option>
+                                </select> 
+                            </div>  
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label><i class="fas fa-graduation-cap"></i>Prueba electiva 2</label>
+                                <select class="form-control" id="matrElectivo2" >
+                                    <option>seleccione</option>
+                                    <option disabled>Física</option>
+                                    <option disabled>Química</option>
+                                    <option disabled>Biología</option>
+                                    <optgroup label="">
+                                    <option disabled>Historia</option>
+                                    </optgroup>
+                                </select> 
+                            </div>  
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <div class="card" style="margin-top:10px">
+            <div class="card-header"><h5>Datos de matrícula</h5></div>
+        <div class="card-body row">
+            <div style="padding:5px;"> 
+                <div class="row">
+                    <div class="col-md-3" >
+                        <label style="float:left;"><i class="far fa-calendar"></i> Fecha de matrícula *</label>
+                        <input  id="matrFecha" placeholder="Fecha de inicio (Día/Mes/Año)" class="form-control" type="text">
+                    </div>
+                    <div class="col-md-3">
+                        <label><i class="fas fa-book"></i> Día de cobro *</label>
+                        <!--<input id="matrDiaCobro" placeholder="Ej: 5" maxlength="2" type="text" class="form-control border-input solo-numero">-->
+
+
+                        <select class="custom-select" id="matrDiaCobro">
+                            <option value="0" disabled>0</option>
+                            <option value="01">01</option>
+                            <option value="02">02</option> 
+                            <option value="03">03</option> 
+                            <option value="04">04</option> 
+                            <option value="05">05</option> 
+                            <option value="06">06</option> 
+                            <option value="07">07</option> 
+                            <option value="08">08</option> 
+                            <option value="09">09</option> 
+                            <option value="10">10</option> 
+                            <option value="11">11</option> 
+                            <option value="12">12</option> 
+                            <option value="13">13</option> 
+                            <option value="14">14</option> 
+                            <option value="15">15</option> 
+                            <option value="16">16</option>
+                            <option value="17">17</option> 
+                            <option value="18">18</option> 
+                            <option value="19">19</option> 
+                            <option value="20">20</option> 
+                            <option value="21">21</option> 
+                            <option value="22">22</option> 
+                            <option value="23">23</option> 
+                            <option value="24">24</option> 
+                            <option value="25">25</option> 
+                            <option value="26">26</option> 
+                            <option value="27">27</option> 
+                            <option value="28">28</option> 
+                        </select>
+
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label><i class="fas fa-graduation-cap"></i> Tipo de curso *</label>
+                            <select class="form-control" id="matrTipoCurso">
+                                <option>Anual</option>
+                                <option>Intensivo</option>
+                            </select> 
+                        </div>  
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label><i class="fas fa-graduation-cap"></i> Forma de pago *</label>
+                            <select class="form-control" id="matrFormaPago">
+                                <option>Cuotas</option>
+                                <option>Contado</option>
+                            </select> 
+                        </div>  
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label><i class="fas fa-book"></i> Año de cobro de cuotas *</label>
+                            <select class="form-control" id="yearSelected">
+                                <option value="current">Actual</option>
+                                <option value="next">Siguiente</option>
+                            </select> 
+                        </div>  
+                    </div>
+                    
+                    <div class="col-md-12">
+                        <h4>Descuentos</h4><br>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label><i class="fas fa-graduation-cap"></i> Descuento 1</label>
+                                        <select class="custom-select" id="matrDescuento">
+                                            <option selected="true" disabled="disabled">seleccione</option>
+                                            <optgroup label="Seleccionar descuento">
+                                                <option>Hijo de profesor (15%)</option>
+                                                <option>Ex alumno (5%)</option>
+                                                <option>Hermano (15%)</option>
+                                                <option>Director (10%)</option>
+                                            </optgroup>
+                                            <optgroup label="Sin descuento">
+                                                <option>Seleccionar</option>
+                                            </optgroup>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label><i class="fas fa-graduation-cap"></i> Descuento 2</label>
+                                        <select class="custom-select"  id="matrDescuento2" disabled>
+                                            <option selected="true" disabled="disabled">seleccione</option>
+                                            <optgroup label="Seleccionar descuento">
+                                                <option disabled>Hijo de profesor (15%)</option>
+                                                <option disabled>Ex alumno (5%)</option>
+                                                <option disabled>Hermano (15%)</option>
+                                                <option disabled>Director (10%)</option>
+                                            </optgroup>
+                                            <optgroup label="Sin descuento">
+                                                <option>Seleccionar</option>
+                                            </optgroup>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-12" style="margin-top:20px;">
+                                        <div class="card">
+                                            <div class="card-header"><h5>Pago de matrícula</h5></div>
+                                            <div class="card-body row">
+                                                
+                                                <div class="col-md-4">
+                                                    <label><i class="fas fa-graduation-cap"></i> Desea pagar la primera cuota?</label> 
+                                                </div>    
+                                                <div class="col-md-6" style="margin-top: -10px">
+                                                    <select class="form-control" id="matrPagoCuota1">
+                                                        <option>no</option>
+                                                        <option>si</option>
+                                                    </select> 
+                                                </div>      
+
+                                                <div class="col-md-4">
+                                                    <label><i class="fas fa-graduation-cap"></i> Forma de pago *</label> 
+                                                </div>
+                                                <div class="col-md-6" style="margin-top: -10px">
+                                                    <select class="form-control" id="matrTipoPago">
+                                                        <option>Efectivo</option>
+                                                        <option>Cheque</option>
+                                                        <option>Transferencia</option>
+                                                    </select> 
+                                                </div>
+                                                <div id="ifCheque"></div>
+                                                <div class="col-md-4">
+                                                    <label><i class="fas fa-graduation-cap"></i> N° Boleta *</label>
+                                                </div>
+                                                <div class="col-md-6" style="margin-top: 0px">
+                                                    <input id="boleta" type="number" class="form-control border-input">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div> 
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header"><h5>Datos financieros<h5></div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label> Valor matrícula :</label>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <input id="matrValor" type="text" class="form-control border-input"  readOnly>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label> Cantidad cuotas :</label>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <input id="matrNumCuotas" type="text" class="form-control border-input"  readOnly>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label> Monto por cuota :</label>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <input id="matrMontoCuota" type="text" class="form-control border-input"  readOnly>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label> Total cuotas :</label>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <input id="matrTotalCuotas" type="text" class="form-control border-input"  readOnly>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label><b> Monto total :</b></label>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <input id="matrMontoTotal" type="text" class="form-control border-input"  readOnly>
+                                            </div>
+                                        </div>
+                                        
+                                        <div id="loadingFData"></div>
+                                        <div id="errMessages2"></div>
+                                        
+                                    </div>
+                                </div> 
+                            </div>
+                        </div>
+                    </div>  
+                </div>
+            </div>
+        </div>
+    </div>
+        <div class="row"> 
+            <div class="offset-md-6 col-md-3" style="margin-top:15px;">
+                <button id="limpiarNuevoAlumno3" class="btn btn-secondary btn-block"><i style="color:#f1c40f;" class="fas fa-ban"></i> Limpiar campos</button>
+            </div>
+            
+            <!--MATRICULAR-->
+            <div class="col-md-3" style="margin-top:15px;">
+                <button id="guardarNuevoAlumno2" class="btn btn-secondary btn-block" disabled><i style="color:#3498db;" class="fas fa-cloud"></i> Guardar</button>
+            </div>
+        </div>
+        </div>    
+    </div>
+      `)
+
+    $('#matrTipoPago').on('change', function() {
+        if($(this).val() == 'Cheque') {
+            chequeStatus = 1;
+            $('#ifCheque').html(`
+                <div class="col-md-12" style="margin-top:10px;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label style="float:left;"> Banco *</label>
+                            <input id="chequeBanco" type="text" value="" placeholder="Nombre del banco" class="form-control border-input">
+                        </div>
+                        <div class="col-md-6">
+                            <label style="float:left;"> Nº Serie *</label>
+                            <input id="chequeNum" type="text" value="" placeholder="Número de serie del cheque" class="form-control border-input">
+                        </div>
+                        <div class="col-md-6">
+                            <label style="float:left;"> Monto cheque *</label>
+                            <input id="chequeMonto" type="text" value="" placeholder="Monto del cheque" class="form-control border-input">
+                        </div> 
+                        <div class="col-md-6">
+                            <label style="float:left;"> Fecha pago *</label>
+                            <input id="chequeFecha" type="text" value="" placeholder="Fecha de pago del cheque" class="form-control border-input">
+                        </div>
+                        
+                    </div>
+                </div>
+                <br>
+            `)
+            $('#chequeFecha').daterangepicker({
+                "locale": {
+                    "format": "DD/MM/YYYY",
+                    "daysOfWeek": [
+                    "Dom",
+                    "Lun",
+                    "Mar",
+                    "Mie",
+                    "Jue",
+                    "Vie",
+                    "Sab"
+                    ],
+                    "monthNames": [
+                    "Enero",
+                    "Febrero",
+                    "Marzo",
+                    "Abril",
+                    "Mayo",
+                    "Junio",
+                    "Julio",
+                    "Agosto",
+                    "Septiembre",
+                    "Octubre",
+                    "Noviembre",
+                    "Diciembre"
+                    ],
+                    "firstDay": 1
+                },
+                drops: "up",
+                singleDatePicker: true,
+                showDropdowns: true
+            });
+        } else {
+            $('#ifCheque').empty()
+            chequeStatus = 0;
+        }
+    })
+
+  $('#matrElectivo option:eq(1)').prop('disabled', false);
+  $('#matrElectivo2 option:eq(4)').prop('disabled', false);
+
+generalETP()
+
+function generalETP(){
+    etp().then(res => {
+        electivo1 ()
+    })
+}
+$('#etp').on('change', function (e){
+    generalETP()
+    $('#matrElectivo').val('')
+    $('#matrElectivo2').val('')
+})
+$('#matrElectivo').on('change', function (e){
+    generalETP()
+})
+
+function etp (){
+    return new Promise(resolve =>{ 
+        let estadoETP= $('#etp').val()
+
+        if (estadoETP=='No'){
+            $('#matrElectivo option:eq(1)').prop('disabled', false);
+            $('#matrElectivo option:eq(2)').prop('disabled', false);
+            
+            let estadoElectivo = $('#matrElectivo').val()
+            if(estadoElectivo=='Historia'||estadoElectivo=='Ciencias'){
+                $('#matrElectivo2 option:eq(1)').prop('disabled', false);
+                $('#matrElectivo2 option:eq(2)').prop('disabled', false);
+                $('#matrElectivo2 option:eq(3)').prop('disabled', false);
+                $('#matrElectivo2 option:eq(4)').prop('disabled', true);
+            }
+            resolve()
+        } else{
+            $('#matrElectivo option:eq(1)').prop('disabled', false);
+            $('#matrElectivo option:eq(2)').prop('disabled', false);
+            
+            let estadoElectivo2 = $('#matrElectivo').val()
+            if(estadoElectivo2=='Ciencias'){
+                $('#matrElectivo2 option:eq(1)').prop('disabled', true);
+                $('#matrElectivo2 option:eq(2)').prop('disabled', true);
+                $('#matrElectivo2 option:eq(3)').prop('disabled', true);
+                $('#matrElectivo2 option:eq(4)').prop('disabled', false);
+            }
+            resolve()
+        }  
+    })
+}
+function electivo1 (){
+    return new Promise(resolve =>{ 
+        let estadoETP = $('#etp').val()
+        resolve()
+    })
+}
+
+generalFunction()
+
+$('#boleta').on('keyup', function (e){
+    saveTicket()
+})
+
+function saveTicket(){
+    let ticket = $('#boleta').val()
+    if(ticket === ''){
+        $('#guardarNuevoAlumno2').prop('disabled', true)
+    }else{
+        $('#guardarNuevoAlumno2').prop('disabled', false)
+    }
+}
+
+function generalFunction(){
+    $('#loadingFData').html(`
+    <center>
+        <i style="color:#3498db;" class="fa fa-spinner fa-pulse fa-2x fa-fw"></i>
+        <span class="sr-only">Cargando...</span>
+    </center>`)
+
+    $('#guardarNuevoAlumno2').attr('disabled', true);
+
+    quotaValues().then(res => {
+        numberQuotesCebal ().then(res => {
+            traerNotas().then(res => {
+                wayToPay().then(res => {
+                    calcularDescuento1().then(res => {
+                        calcularDescuento2().then(res => {
+                            beca().then(res =>{
+                                calcularMontoTotal()
+                                $('#loadingFData').empty()
+                                let ticket = $('#boleta').val()
+                                if(ticket !== ''){
+                                    $('#guardarNuevoAlumno2').attr('disabled', false);
+                                }
+                                console.log(allValues) 
+                            })
+                        })
+                    })
+                })
+            }) 
+        })
+    })
+}
+
+
+//TODOS LOS ONCHANGE
+$('#matrTipoCurso').on('change', function (e){
+    generalFunction()
+})
+$('#matrEgreso').on('change', function (e){
+    generalFunction()  
+})
+$('#matrFormaPago').on('change', function (e){
+    generalFunction()
+})
+$('#matrDescuento').on('change', function (e){
+    generalFunction()
+})
+$('#matrDescuento2').on('change', function (e){
+    generalFunction()
+})
+$('#matrBeca').on('change', function(){
+    generalFunction()
+})
+
+$('#matrPromedio').on('keyup', function (e){
+    generalFunction()
+    $('#btnPromedio').prop('disabled', false);
+})
+
+$('#matrPromedio').on('change', function (e){
+    validarValorPromedio()
+})
+
+//FORMA DE PAGO  typePayStatus
+function wayToPay(){
+    return new Promise(resolve =>{
+        let selectedTypePay = $('#matrFormaPago').val();
+        if(selectedTypePay == "Cuotas"){
+            typePayStatus = 1;
+            let tipoAnualIntensivo = $('#matrTipoCurso').val();
+            resolve()
+            if (tipoAnualIntensivo == "Anual"){
+                typePayStatus = 0
+                allValues.cantidadCuotas = 9
+                allValues.totalCuotas = (allValues.montoPorCuota * allValues.cantidadCuotas)
+            
+                resolve()
+            }else if (tipoAnualIntensivo == "Intensivo"){
+                typePayStatus = 0
+                allValues.cantidadCuotas = 5
+                allValues.totalCuotas = (allValues.montoPorCuota * allValues.cantidadCuotas)
+              
+                resolve()
+            }
+        }else if (selectedTypePay == "Contado"){
+            typePayStatus = 1;
+            let tipoAnualIntensivo = $('#matrTipoCurso').val();
+            resolve()
+            if (tipoAnualIntensivo == "Anual"){
+                allValues.totalCuotas  = (allValues.montoPorCuota * allValues.cantidadCuotas)-(allValues.montoPorCuota * allValues.cantidadCuotas)*0.20;
+                allValues.montoPorCuota = allValues.totalCuotas;
+                allValues.cantidadCuotas = 1
+              
+                resolve()
+            }else if (tipoAnualIntensivo == "Intensivo"){
+                allValues.totalCuotas  = (allValues.montoPorCuota * allValues.cantidadCuotas)-(allValues.montoPorCuota * allValues.cantidadCuotas)*0.10;
+                allValues.montoPorCuota = allValues.totalCuotas;
+                allValues.cantidadCuotas = 1
+             
+                resolve()
+            }
+        }
+    })
+}
+  
+   
+
+
+//calcular los valores segun promedio de notas
+
+function traerNotas(){
+    return new Promise(resolve =>{
+        ajax({ 
+            url:'/api/quotaValuesCebal'
+        }).then(res => {
+        let estado = $('#matrEgreso').val()
+        console.log("estado seleccionado",estado)
+        console.log("promedio inicio",average)
+     
+           average = $('#matrPromedio').val()
+
+            if (estado == 'Egresado'){
+                selects.graduated = res.filter(function(el) {
+                    return el.status == 'graduated';
+                })[0].notes
+
+                let promedioSelected = selects.graduated.filter(function(el){
+                    return el.score  == average
+                })
+                if (promedioSelected[0]){
+                    promedioSelected = promedioSelected[0].price
+                    allValues.montoPorCuota = promedioSelected;
+
+                    setTimeout(() => {
+                        resolve()
+                    }, 100);
+                    
+                }else{
+                    average ='normal'
+                    let normal = selects.graduated.filter(function(el) {
+                    return el.score == 'normal';
+                    })[0].price
+                    allValues.montoPorCuota = normal;
+
+                    setTimeout(() => {
+                        resolve()
+                    }, 100);
+                } 
+
+                setTimeout(() => {
+                    resolve()
+                }, 100);
+
+            }else if(estado == 'No egresado'){
+                selects.notgraduated = res.filter(function(el) {
+                    return el.status == 'notGraduated';
+                })[0].notes
+                let promedioSelected2 = selects.notgraduated.filter(function(el){
+                    return el.score  == average
+                })
+                if (promedioSelected2[0]){
+                    promedioSelected2 = promedioSelected2[0].price
+                    allValues.montoPorCuota = promedioSelected2;
+                    setTimeout(() => {
+                        resolve()
+                    }, 100);
+                }else{
+                    average ='normal'
+                    let normal2 = selects.notgraduated.filter(function(el) {
+                    return el.score == 'normal';
+                    })[0].price
+                    allValues.montoPorCuota = normal2;
+                    setTimeout(() => {
+                        resolve()
+                    }, 100);
+                } 
+                setTimeout(() => {
+                    resolve()
+                }, 100);
+            }
+        })
+        })
+}
+
+
+//Promedio min 10 y max 70
+function validarValorPromedio(){
+    let maxMin = $('#matrPromedio').val()
+    if(maxMin > 70){
+        $('#matrPromedio').val('')
+        toastr.warning("Ingrese un promedio válido")
+    }else if (maxMin < 10){
+        $('#matrPromedio').val('')
+        toastr.warning("Ingrese un promedio válido")
+    }
+}
+//becado o no becado
+function beca(){
+    return new Promise(resolve =>{
+    let beca = $('#matrBeca').val()
+        if (beca === 'Si'){
+            statusBeca = 1
+            allValues.cantidadCuotas = 0
+            allValues.montoPorCuota = 0
+            allValues.totalCuotas = 0
+            $('#matrFormaPago').val('Contado')
+            $('#matrFormaPago').prop('disabled', true)
+            $('#matrDiaCobro').val('0')
+            $('#matrDiaCobro').prop('disabled', true)
+            resolve()
+        }else if (beca === 'No'){
+            statusBeca = 0
+            $('#matrFormaPago').prop('disabled', false)
+            $('#matrDiaCobro').val('01') // Puede ser cualquier día pero por defecto 4
+            $('#matrDiaCobro').prop('disabled', false)
+            //$('#matrFormaPago').val('Cuotas')
+            resolve()
+        }
+    })
+}
+
+//calcular los descuentos
+function calcularDescuento1(){
+    return new Promise(resolve =>{
+        let descuento = $('#matrDescuento').val()
+        if(descuento ==='Hijo de profesor (15%)'){
+            allValues.descuentoCuota1= allValues.montoPorCuota * 0.15;
+            montoxCuota = allValues.montoPorCuota-allValues.descuentoCuota1
+            allValues.montoPorCuota = Math.floor(montoxCuota)
+            totalAllCuotas=allValues.cantidadCuotas*allValues.montoPorCuota
+            allValues.totalCuotas= Math.floor(totalAllCuotas)
+            $('#matrDescuento2 option:eq(2)').prop('disabled', false);
+            $('#matrDescuento2 option:eq(3)').prop('disabled', false);
+            $('#matrDescuento2 option:eq(4)').prop('disabled', false);
+            $('#matrDescuento2 option:eq(1)').prop('disabled', true);
+            $('#matrDescuento2').prop('disabled', false)
+            resolve()
+        }else if(descuento ==='Hermano (15%)'){
+            allValues.descuentoCuota1= allValues.montoPorCuota * 0.05;
+            montoxCuota = allValues.montoPorCuota-allValues.descuentoCuota1
+            allValues.montoPorCuota = Math.floor(montoxCuota)
+            totalAllCuotas=allValues.cantidadCuotas*allValues.montoPorCuota
+            allValues.totalCuotas= Math.floor(totalAllCuotas)
+            $('#matrDescuento2 option:eq(1)').prop('disabled', false);
+            $('#matrDescuento2 option:eq(2)').prop('disabled', false);
+            $('#matrDescuento2 option:eq(4)').prop('disabled', false);
+            $('#matrDescuento2 option:eq(3)').prop('disabled', true);
+            $('#matrDescuento2').prop('disabled', false)
+            resolve()
+        }else if(descuento ==='Ex alumno (5%)'){
+            allValues.descuentoCuota1= allValues.montoPorCuota * 0.05;
+            montoxCuota = allValues.montoPorCuota-allValues.descuentoCuota1
+            allValues.montoPorCuota = Math.floor(montoxCuota)
+            totalAllCuotas=allValues.cantidadCuotas*allValues.montoPorCuota
+            allValues.totalCuotas= Math.floor(totalAllCuotas)
+            $('#matrDescuento2 option:eq(1)').prop('disabled', false);
+            $('#matrDescuento2 option:eq(3)').prop('disabled', false);
+            $('#matrDescuento2 option:eq(4)').prop('disabled', false);
+            $('#matrDescuento2 option:eq(2)').prop('disabled', true);
+            $('#matrDescuento2').prop('disabled', false)
+            resolve()
+        }else if(descuento ==='Director (10%)'){
+            allValues.descuentoCuota1= allValues.montoPorCuota * 0.10;
+            montoxCuota = allValues.montoPorCuota-allValues.descuentoCuota1
+            allValues.montoPorCuota = Math.floor(montoxCuota)
+            totalAllCuotas=allValues.cantidadCuotas*allValues.montoPorCuota
+            allValues.totalCuotas= Math.floor(totalAllCuotas)
+            $('#matrDescuento2 option:eq(1)').prop('disabled', false);
+            $('#matrDescuento2 option:eq(2)').prop('disabled', false);
+            $('#matrDescuento2 option:eq(3)').prop('disabled', false);
+            $('#matrDescuento2 option:eq(4)').prop('disabled', true);
+            $('#matrDescuento2').prop('disabled', false)
+            resolve()
+        }else if (descuento ==='Seleccionar'){
+            $('#matrDescuento2').prop('disabled', true)
+            $('#matrDescuento2').val("seleccione")
+            resolve()
+        }else{
+            resolve()
+        }
+    })
+}
+
+function calcularDescuento2(){
+    return new Promise(resolve =>{
+        let descuento2 = $('#matrDescuento2').val()
+        if(descuento2 ==='Hijo de profesor (15%)' ||descuento2 === 'Hermano (15%)'){
+            
+            montoxCuotas =(allValues.montoPorCuota)-(allValues.montoPorCuota)*0.15
+            allValues.montoPorCuota = Math.floor(montoxCuotas)
+            totalAllCuota=allValues.montoPorCuota*allValues.cantidadCuotas
+            allValues.totalCuotas= Math.floor(totalAllCuota)
+
+            resolve()
+        }else if(descuento2 ==='Ex alumno (5%)'){
+            montoxCuotas =(allValues.montoPorCuota)-(allValues.montoPorCuota)*0.05
+            allValues.montoPorCuota = Math.floor(montoxCuotas)
+            totalAllCuota=allValues.montoPorCuota*allValues.cantidadCuotas
+            allValues.totalCuotas= Math.floor(totalAllCuota)
+            resolve()
+        
+        }else if(descuento2 ==='Director (10%)'){
+            montoxCuotas =(allValues.montoPorCuota)-(allValues.montoPorCuota)*0.10
+            allValues.montoPorCuota = Math.floor(montoxCuotas)
+            totalAllCuota=allValues.montoPorCuota*allValues.cantidadCuotas
+            allValues.totalCuotas= Math.floor(totalAllCuota)
+            resolve()
+        }else{
+            resolve()
+        }
+    })
+}
+//calcular el monto de la matricula de un alumno
+function calcularMontoTotal(){
+    $('#matrValor').val(number_format(allValues.valorMatricula))
+    $('#matrNumCuotas').val(allValues.cantidadCuotas)
+    $('#matrMontoCuota').val(number_format(Math.floor(allValues.montoPorCuota)))
+    $('#matrTotalCuotas').val(number_format(Math.floor(allValues.totalCuotas)))
+    let montoTotalFinish =  (allValues.totalCuotas+allValues.valorMatricula)
+    $('#matrMontoTotal').val(number_format(Math.floor(montoTotalFinish)))
+   
+}
+
+//TRAER NUMERO DE CUOTAS
+function numberQuotesCebal (){
+    return new Promise(resolve =>{
+        ajax({ 
+            url:'/api/quotaNumbers'
+        }).then(res => {
+            let selectedTypeCourse = $('#matrTipoCurso').val();
+            if (selectedTypeCourse === 'Anual'){
+
+                numberQuotes.yearly = res.filter(function(el) {
+                    return el.type == 'yearly';
+                })[0].quotaNumber
+
+                allValues.cantidadCuotas= numberQuotes.yearly;
+
+                setTimeout(() => {
+                    console.log("cuotas anual",allValues.cantidadCuotas)
+                    resolve()
+                }, 100);
+                
+            }else if(selectedTypeCourse==='Intensivo'){
+
+                numberQuotes.intensive = res.filter(function(el) {
+                    return el.type == 'intensive';
+                })[0].quotaNumber
+                allValues.cantidadCuotas= numberQuotes.intensive;
+                
+                setTimeout(() => {
+                    console.log("cuotas intensivo",allValues.cantidadCuotas)
+                    resolve()
+                }, 100);
+            }
+        });
+    });
+}
+
+//EGRESADO O NO EGRESADO 
+function quotaValues (){
+    return new Promise(resolve =>{
+        ajax({ 
+            url:'/api/quotaValuesCebal'
+        }).then(res => {
+            let selectedStatus = $('#matrEgreso').val();
+            if (selectedStatus == 'Egresado'){
+
+                valores.graduated = res.filter(function(el) {
+                    return el.status == 'graduated';
+                })[0].notes
+
+                let matrScore = valores.graduated.filter(function(el) {
+                    return el.score == 'matricula';
+                })[0].price
+                
+                let valNormal = valores.graduated.filter(function(el) {
+                    return el.score == 'normal';
+                })[0].price
+
+
+                allValues.valorMatricula = matrScore;
+                allValues.montoPorCuota = valNormal;
+              
+                setTimeout(() => {
+                    resolve()
+                }, 100);
+                
+            }else{
+                valores.notgraduated = res.filter(function(el) {
+                    return el.status == 'notGraduated';
+                })[0].notes
+                let matrScore = valores.notgraduated.filter(function(el) {
+                    return el.score == 'matricula';
+                })[0].price
+
+                let valNormal = valores.notgraduated.filter(function(el) {
+                    return el.score == 'normal';
+                })[0].price
+
+                allValues.valorMatricula = matrScore;
+                allValues.montoPorCuota= valNormal;
+               
+                setTimeout(() => {
+                    resolve()
+                }, 100);
+            }
+        });
+    })
+   
+}
+
+
+
+//fecha matricula
+$('#matrFecha').daterangepicker({
+        "locale": {
+            "format": "DD/MM/YYYY",
+            "daysOfWeek": [
+            "Dom",
+            "Lun",
+            "Mar",
+            "Mie",
+            "Jue",
+            "Vie",
+            "Sab"
+            ],
+            "monthNames": [
+            "Enero",
+            "Febrero",
+            "Marzo",
+            "Abril",
+            "Mayo",
+            "Junio",
+            "Julio",
+            "Agosto",
+            "Septiembre",
+            "Octubre",
+            "Noviembre",
+            "Diciembre"
+            ],
+            "firstDay": 1
+        },
+        drops: "down",
+        singleDatePicker: true,
+        showDropdowns: true
+    });
+
+
+//Habilitar o deshabilitar egresado, no egresado
+$('#matrEgreso').on('change', function(){
+    let egreso = $('#matrEgreso').val()
+    if (egreso == 'Egresado'){
+        $('#matrAñoEgreso').prop('disabled', false);
+        $('#matrCurso').prop('disabled', true);
+        $('#matrCurso').val('')
+    }else{
+        $('#matrAñoEgreso').prop('disabled', true);
+        $('#matrCurso').prop('disabled', false);
+        $('#matrAñoEgreso').val('')
+    }
+    })
+    //validar solo numeros
+    $(document).ready(function (){
+        $('.solo-numero').keyup(function (){
+        this.value = (this.value + '').replace(/[^0-9]/g, ''); 
+        });
+    });
+   
+
+  
+//GUARDAR MATRICULA
+    $('#guardarNuevoAlumno2').on('click', function () {  
+        //Variables desde modal
+        let alumnoRut          = $('#modRut').val()
+        let colegio            = $('#matrColegio').val()
+        let estadoEgreso       = $('#matrEgreso').val()
+        let beca               = $('#matrBeca').val()
+        let anoEgreso          = $('#matrAñoEgreso').val()
+        let curso              = $('#matrCurso').val()
+        let promedio           = $('#matrPromedio').val()
+        let horario            = $('#selectHorario').select2('data')[0].text;
+        let electivo           = $('#matrElectivo').val()
+        let electivo2          = $('#matrElectivo2').val()
+        let fechaMatricula     = $('#matrFecha').val()
+        let diaCobro           = $('#matrDiaCobro').val()
+        let tipoCurso          = $('#matrTipoCurso').val()
+        let formaPago          = $('#matrFormaPago').val()
+        let descuento          = $('#matrDescuento').val()
+        let descuento2         = $('#matrDescuento2').val()
+        let valorMatricula     = $('#matrValor').val()
+        let numCuotas          = $('#matrNumCuotas').val()
+        let montoCuota         = $('#matrMontoCuota').val()
+        let totalCuotas        = $('#matrTotalCuotas').val()
+        let montoTotal         = $('#matrMontoTotal').val()
+        let boleta             = $('#boleta').val()
+        let formaPagoMatricula = $('#matrTipoPago').val()
+        let etp                = $('#etp').val()
+        let estadoPrimeraCuota = $('#matrPagoCuota1').val() // Si o No al pagar la primera cuota en boleta de matricula
+        let yearSelected       = $('#yearSelected').val()
+        /*
+        let validateCounter2 = 0 
+        let errMsg2 = '';
+        $('#errMessages2').empty();
+
+        if (colegio.length > 0){
+            validateCounter2++
+        }else{
+            errMsg2 += '<br> Debe ingresar el nombre del colegio.'
+        }
+        if(promedio.length > 0){
+            validateCounter2++
+        }else{
+            errMsg2 += '<br> Debe ingresar el promedio del alumno.'
+        }
+        if(horario.length > 0){
+            validateCounter2++
+        }else{
+            errMsg2 += '<br> Debe seleccionar un horario.'
+        } 
+          */
+       
+
+        if(chequeStatus == 1) {
+            let chequeBanco = $('#chequeBanco').val()
+            let chequeNum   = $('#chequeNum').val()
+            let chequeMonto = $('#chequeMonto').val()
+            let chequeFecha = $('#chequeFecha').val()
+            let chequeValidateCounter = 0;
+            let cheque = {}
+
+            if(chequeBanco.length > 0) { // 1
+                cheque.banco = chequeBanco
+                chequeValidateCounter++
+            } else {
+                toastr.warning('Ingrese el nombre del banco del cheque')
+            }
+
+            if(chequeNum.length > 0) { // 2
+                cheque.num = chequeNum
+                chequeValidateCounter++
+            } else {
+                toastr.warning('Ingrese el número de serie del cheque')
+            }
+
+            if(chequeMonto.length > 0) { // 3
+                cheque.monto = chequeMonto
+                chequeValidateCounter++
+            } else {
+                toastr.warning('Ingrese el monto del cheque')
+            }
+
+            if(chequeFecha.length > 0) { // 4
+                cheque.date = chequeFecha
+                chequeValidateCounter++
+            } else {
+                toastr.warning('Ingrese Fecha de pago del cheque')
+            }            
+            
+            if(chequeValidateCounter == 4) {
+                //fin variables
+                ajax({
+                    url: '/api/nuevaMatricula',
+                    type: 'POST',
+                    data: {
+                        rutAlumno     :alumnoRut,
+                        colegio       :colegio,
+                        estadoEgreso  :estadoEgreso,
+                        beca          :beca,
+                        anoEgreso     :anoEgreso,
+                        curso         :curso,
+                        promedio      :promedio,
+                        horario       :horario,
+                        etp           :etp,
+                        electivo      :electivo,
+                        electivo2     :electivo2,
+                        fechaMatricula:fechaMatricula,
+                        diaCobro      :diaCobro ,
+                        tipoCurso     :tipoCurso,
+                        formaPago     :formaPago,
+                        descuento     :descuento,
+                        descuento2    :descuento2,
+                        valorMatricula:valorMatricula,
+                        numCuotas     :numCuotas,
+                        montoCuota    :montoCuota,
+                        totalCuotas   :totalCuotas,
+                        montoTotal    :montoTotal,
+                        boleta        :boleta,
+                        yearSelected  :yearSelected,
+                        formaPagoMatricula:formaPagoMatricula,
+                        cheque: JSON.stringify(cheque),
+                        estadoPrimeraCuota : estadoPrimeraCuota
+                    } 
+                    //IF OK MOSTRAR  AGREGADO, ELSE NO SE PUDO AGREGAR
+                }).then(res => {
+                    console.log(res)
+                    if(res.err){
+                        toastr.warning(res.err)
+                    } else {
+
+                        screenLog({
+                            id: 'modal_body',
+                            form: 'Matricular alumno',
+                            action: `Se ha matriculado el alumno de rut ${rutFunc(alumnoRut)} en {{credentials.place}}`,
+                            type: 'matrStudent'
+                        })
+
+                        swal({
+                            title: 'Agregado!',
+                            backdrop: 'static', 
+                            keyboard: false,
+                            text: res.ok,
+                            type: 'success',
+                            timer: 10000
+                        }).then(result => {
+                            $('#modalEstudiantes').modal('hide')
+                            reloadRepairTableAlumnos()
+                        })
+                    }
+                })
+            } else {
+                //$('#save').attr('disabled', false);
+            }
+            
+        } else {
+            ajax({
+                url: '/api/nuevaMatricula',
+                type: 'POST',
+                data: {
+                    rutAlumno     :alumnoRut,
+                    colegio       :colegio,
+                    estadoEgreso  :estadoEgreso,
+                    beca          :beca,
+                    anoEgreso     :anoEgreso,
+                    curso         :curso,
+                    promedio      :promedio,
+                    horario       :horario,
+                    etp           :etp,
+                    electivo      :electivo,
+                    electivo2     :electivo2,
+                    fechaMatricula:fechaMatricula,
+                    diaCobro      :diaCobro ,
+                    tipoCurso     :tipoCurso,
+                    formaPago     :formaPago,
+                    descuento     :descuento,
+                    descuento2    :descuento2,
+                    valorMatricula:valorMatricula,
+                    numCuotas     :numCuotas,
+                    montoCuota    :montoCuota,
+                    totalCuotas   :totalCuotas,
+                    montoTotal    :montoTotal,
+                    boleta        :boleta,
+                    yearSelected  :yearSelected,
+                    formaPagoMatricula:formaPagoMatricula,
+                    estadoPrimeraCuota: estadoPrimeraCuota
+                } 
+                //IF OK MOSTRAR  AGREGADO, ELSE NO SE PUDO AGREGAR
+            }).then(res => {
+                console.log(res)
+                if(res.err){
+                    toastr.warning(res.err)
+                } else {
+
+                    screenLog({
+                        id: 'modal_body',
+                        form: 'Matricular alumno',
+                        action: `Se ha matriculado el alumno de rut ${rutFunc(alumnoRut)} en {{credentials.place}}`,
+                        type: 'matrStudent'
+                    })
+
+                    swal({
+                        title: 'Agregado!',
+                        backdrop: 'static', 
+                        keyboard: false,
+                        text: res.ok,
+                        type: 'success',
+                        timer: 10000
+                    }).then(result => {
+                        $('#modalEstudiantes').modal('hide')
+                        reloadRepairTableAlumnos()
+                    })
+                }
+            })
+        }
+        
+    })
+ //iniciar select de horarios
+let selects = {
+        place:[],
+        horario: [],
+    }
+ajax({ // cargar horarios
+    url:'/api/horariosCebalTraer'
+    }).then(res => {
+        console.log(res)
+        selects.place = res.filter(function(el) {
+            return el.place == '{{{credentials.place}}}'
+        })
+        console.log(selects.place)
+        let horario = selects.place.reduce((arr, el, i) => {
+            return arr.concat({
+                id: i,
+                text: el.horary
+            })   
+        }, []);
+
+        $('#selectHorario').select2({
+            placeholder:'seleccione',
+            width:'100%',
+            data: horario
+        });
+    });  
+    };
+//BOTON MATRICULAR ESTUDIANTE
+$('#enrolledEstudiante').on('click', function () {
+    modalMatrAlumnos();
+   
+})
+//AGREGAR UN NUEVO ESTUDIANTE 
+$('#agregarEstudiante').on('click', function () {
+    nuevoEstudiante();
+})
+    function nuevoEstudiante() { 
+        
+      $('#modalEstudiantes').modal();
+      $('#modal_title').text('Ingreso de nuevo alumno');
+      $('#modal_body').html(`
+            <div class="card">
+                <div class="card-header"><h5>Datos alumno</h5></div>
+                <div class="card-body row">
+        
+                    <div class="col-md-4">
+                        <label style="float:left;"><i class="fa fa-key" aria-hidden="true"></i> Rut *</label>
+                        <input id="rutNuevoAlumno" maxlength="12" type="text"  required class="form-control border-input"  placeholder="Ingrese Rut" >
+                    </div>
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="far fa-calendar"></i> Fecha de nacimiento *</label>   
+                        <input  id="fechaNuevoAlumno" placeholder="Fecha de inicio (Día/Mes/Año)" class="form-control" type="text">
+                    </div>
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fas fa-map-marker"></i> Ciudad *</label>
+                        <input id="ciudadNuevoAlumno" type="text"  required class="form-control border-input" value="{{{ credentials.place }}}" readOnly>
+                    </div>
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fa fa-user" aria-hidden="true"></i> Nombre *</label>
+                        <input id="nombreNuevoAlumno" type="text" onkeyup="aMays(event, this)" onblur="aMays(event, this)" required class="form-control border-input"  placeholder="Ingrese Nombre">
+                    </div>
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"> Apellido paterno *</label>
+                        <input id="apellido1NuevoAlumno" type="text" onkeyup="aMays(event, this)" onblur="aMays(event, this)" class="form-control border-input"  placeholder="Ingrese primer apellido" >
+                    </div>
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;">Apellido materno</label>
+                        <input id="apellido2NuevoAlumno" type="text" onkeyup="aMays(event, this)" onblur="aMays(event, this)" class="form-control border-input" placeholder="Ingrese segundo apellido">
+                    </div>
+
+                    
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fa fa-envelope" aria-hidden="true"></i> Correo</label>
+                        <input id="correoNuevoAlumno" type="email" onkeyup="aMinus(event, this)" onblur="aMinus(event, this)" aria-describedby="emailHelp" class="form-control border-input" value="" placeholder="Ingrese correo">
+                    </div>
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fas fa-phone-square"></i> Celular</label>
+                        <input id="celularNuevoAlumno" type="text" class="form-control border-input"  value="" placeholder="Ingrese celular">
+                    </div>
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fa fa-home" aria-hidden="true"></i> Dirección *</label>
+                        <input id="direccionNuevoAlumno" type="text" onkeyup="aMays(event, this)" onblur="aMays(event, this)" class="form-control border-input"  value="" placeholder="Ingrese dirección">
+                    </div>
+                    <!--
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fas fa-image"></i> Foto alumno</label>
+                        <input type="file" accept="image/*" class="form-control-file" id="matrImage">
+                    </div>
+                    -->
+                </div>
+            </div>    
+
+            <div class="card" style="margin-top:3px">
+                <div class="card-header"><h5>Datos apoderado</h5></div>
+                <div class="card-body row">        
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fas fa-user-tie"></i> Nombre apoderado *</label>
+                        <input id="nombreApoderado" type="text" onkeyup="aMays(event, this)" onblur="aMays(event, this)" class="form-control border-input"  value="" placeholder="Ingrese nombre apoderado">
+                    </div>
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;">Parentesco *</label>
+                        <input id="parentescoApoderado" type="text" onkeyup="aMays(event, this)" onblur="aMays(event, this)" class="form-control border-input"  value="" placeholder="Parentesco apoderado">
+                    </div>
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fas fa-building"></i> Lugar de trabajo </label>
+                        <input id="trabajoApoderado" type="text" onkeyup="aMays(event, this)" onblur="aMays(event, this)" class="form-control border-input"  value="" placeholder="Ingrese dirección de trabajo">
+                    </div>
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fas fa-phone-square"></i> Celular</label>
+                        <input id="celularApoderado" type="text" class="form-control border-input"  value="" placeholder="Ingrese celular">
+                    </div> 
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fa fa-envelope"></i> Correo</label>
+                        <input id="correoApoderado" type="email" onkeyup="aMinus(event, this)" onblur="aMinus(event, this)"  aria-describedby="emailHelp" class="form-control border-input" placeholder="Ingrese correo apoderado">
+                    </div> 
+                </div>
+            </div>
+            
+            <div id="errMessages"></div>
+
+            <div class="row"> 
+                <div class="offset-md-3 col-md-3" style="margin-top:15px;">
+                    <button id="limpiarNuevoAlumno" class="btn btn-secondary btn-block"><i style="color:#f1c40f;" class="fas fa-ban"></i> Limpiar</button>
+                </div>
+                <div class="col-md-3" style="margin-top:15px;">
+                    <button id="guardarNuevoAlumno2" class="btn btn-secondary btn-block" disabled><i style="color:#3498db;" class="fas fa-cloud"></i> Guardar</button>
+                </div>
+                <!--
+                <div class="col-md-3" style="margin-top:15px;">
+                    <button id="guardarNuevoAlumno1" class="btn btn-secondary btn-block" disabled><i style="color:#3498db;" class="fas fa-cloud"></i> Guardar y matricular</button>
+                </div> --!>
+            </div>
+      `)
+    //fecha nacimiento Alumno
+    $('#fechaNuevoAlumno').daterangepicker({
+        "locale": {
+            "format": "DD/MM/YYYY",
+            "daysOfWeek": [
+                "Dom",
+                "Lun",
+                "Mar",
+                "Mie",
+                "Jue",
+                "Vie",
+                "Sab"
+            ],
+            "monthNames": [
+                "Enero",
+                "Febrero",
+                "Marzo",
+                "Abril",
+                "Mayo",
+                "Junio",
+                "Julio",
+                "Agosto",
+                "Septiembre",
+                "Octubre",
+                "Noviembre",
+                "Diciembre"
+            ],
+            "firstDay": 1
+        },
+        drops: "down",
+        singleDatePicker: true,
+        showDropdowns: true
+    });
+    //validar archivos de imagen solamente
+    $('INPUT[type="file"]').change(function () {
+        var ext = this.value.match(/\.(.+)$/)[1];
+        switch (ext) {
+            case 'jpg':
+            case 'jpeg':
+            case 'png':
+                $('#uploadButton').attr('disabled', false);
+                break;
+            default:
+                alert('El archivo seleccionado no tiene un formato compatible');
+                this.value = '';
+        }
+    })
+
+    //validar rut 
+    $('#rutNuevoAlumno').on('keyup', function(){
+        let rut  = $('#rutNuevoAlumno').val()
+        if($.validateRut(rut) && rut.length>5) {
+            $('#guardarNuevoAlumno2').prop('disabled', false);
+            $('#guardarNuevoAlumno1').prop('disabled', false);
+
+            $('#rutNuevoAlumno').val(rutFunc(rut))
+        }else{
+            $('#guardarNuevoAlumno2').prop('disabled', true);
+            $('#guardarNuevoAlumno1').prop('disabled', true);
+        }
+    })
+
+    $('#limpiarNuevoAlumno').on('click', function () {
+        $('#rutNuevoAlumno').val('')
+        $('#fechaNuevoAlumno').val('')
+        $('#nombreNuevoAlumno').val('')
+        $('#apellido1NuevoAlumno').val('')
+        $('#apellido2NuevoAlumno').val('')
+        $('#correoNuevoAlumno').val('')
+        $('#celularNuevoAlumno').val('')
+        $('#direccionNuevoAlumno').val('')
+        $('#nombreApoderado').val('')
+        $('#parentescoApoderado').val('')
+        $('#trabajoApoderado').val('')
+        $('#celularApoderado').val('')
+        $('#correoApoderado').val('')
+        $('#rutNuevoAlumno').focus()
+    })
+
+    $('#guardarNuevoAlumno1').on('click', function () {
+        
+        //Variables desde modal
+            let nuevoAlumnoRut       = $('#rutNuevoAlumno').val()
+            let nuevoAlumnoCiudad    = $('#ciudadNuevoAlumno').val()
+            let nuevoAlumnofecha     = $('#fechaNuevoAlumno').val()
+            let nuevoAlumnoNombre    = $('#nombreNuevoAlumno').val()
+            let nuevoAlumnoApellido1 = $('#apellido1NuevoAlumno').val()
+            let nuevoAlumnoApellido2 = $('#apellido2NuevoAlumno').val()
+            let nuevoAlumnoCorreo    = $('#correoNuevoAlumno').val()
+            let nuevoAlumnoCelular   = $('#celularNuevoAlumno').val()
+            let nuevoAlumnoDireccion = $('#direccionNuevoAlumno').val()
+            let apoderadoNombre      = $('#nombreApoderado').val()
+            let apoderadoParentesco  = $('#parentescoApoderado').val()
+            let apoderadoTrabajo     = $('#trabajoApoderado').val()
+            let apoderadoCelular     = $('#celularApoderado').val()
+            let apoderadoCorreo      = $('#correoApoderado').val()
+
+            let validateCounter = 0 // debe llegar a 8
+            let errMsg = '';
+            $('#errMessages').empty();
+
+            if(nuevoAlumnoRut.length > 5) validateCounter++; // 1
+            if(nuevoAlumnoCiudad.length > 1) validateCounter++; // 2
+            if(nuevoAlumnofecha.length > 3) validateCounter++; // 3
+            if(nuevoAlumnoNombre.length >= 1) { //4
+                validateCounter++; 
+            } else {
+                errMsg += '<br> Debe ingresar el nombre del alumno.'
+            }
+
+            if(nuevoAlumnoApellido1.length > 0) { // 5
+                validateCounter++
+            } else {
+                errMsg += '<br> Debe ingresar el apellido paterno del alumno.'
+            }
+
+            if(nuevoAlumnoDireccion.length > 0) { // 6
+                validateCounter++
+            } else {
+                errMsg += '<br> Debe ingresar la dirección del alumno.'
+            }
+
+            if(apoderadoNombre.length > 0) { // 7
+                validateCounter++
+            } else {
+                errMsg += '<br> Debe ingresar el nombre del apoderado del alumno.'
+            }
+            
+            if(apoderadoParentesco.length > 0) { // 8
+                validateCounter++
+            } else {
+                errMsg += '<br> Debe ingresar el parentesco del apoderado.'
+            }
+
+            let img = $('#matrImage').val()
+
+            console.log(img)
+            //fin variables
+
+            if(validateCounter >= 8) {
+                $('#guardarNuevoAlumno1').prop('disabled', true);
+                ajax({
+                    url: '/api/nuevoalumno',
+                    type: 'POST',
+                    data: {
+                        rutalumno:           nuevoAlumnoRut,
+                        ciudadAlumno:        nuevoAlumnoCiudad,
+                        fechaAlumno:         nuevoAlumnofecha,
+                        nombreAlumno:        nuevoAlumnoNombre,
+                        apellido1Alumno:     nuevoAlumnoApellido1,
+                        apellido2Alumno:     nuevoAlumnoApellido2,
+                        correoAlumno:        nuevoAlumnoCorreo,
+                        celularAlumno:       nuevoAlumnoCelular,
+                        direccionAlumno:     nuevoAlumnoDireccion,
+                        nombreApoderado:     apoderadoNombre,
+                        parentescoApoderado: apoderadoParentesco,
+                        trabajoApoderado:    apoderadoTrabajo,
+                        celularApoderado:    apoderadoCelular,
+                        correoApoderado:     apoderadoCorreo
+                    // img:                 img
+                    }
+                }).then(res => {
+                    console.log(res)
+                    if(res.ok) {
+                        screenLog({
+                            id: 'modal_body',
+                            form: 'Nuevo alumno no matriculado',
+                            action: `Se ha agregado el alumno ${nuevoAlumnoNombre} ${nuevoAlumnoApellido1} de rut ${rutFunc(nuevoAlumnoRut)} en {{credentials.place}}`,
+                            type: 'newStudent'
+                        })
+
+                        swal({
+                            title: 'Agregado!',
+                            backdrop: 'static', 
+                            keyboard: false,
+                            text: `El alumno ${res.ok.name} ${res.ok.lastname1} agregado correctamente.`,
+                            type: 'success',
+                            timer: 60000
+                        }).then(result => {
+                            reloadRepairTableAlumnos()
+                            //$('#modalEstudiantes').modal('hide')
+                           // modalMatrAlumnos()
+                           
+                        })
+                    } else {
+                        toastr.warning(res.err)
+                    }	
+                })
+            } else {
+                $('#errMessages').html(`
+                <div class="alert alert-dismissible alert-warning">
+                    <h4 class="alert-heading">Se deben corregir los siguientes errores.</h4>
+                    ${errMsg}
+                </div>
+                `)
+            }
+            
+        })
+
+    $('#guardarNuevoAlumno2').on('click', function () {
+        
+        //Variables desde modal
+            let nuevoAlumnoRut       = $('#rutNuevoAlumno').val()
+            let nuevoAlumnoCiudad    = $('#ciudadNuevoAlumno').val()
+            let nuevoAlumnofecha     = $('#fechaNuevoAlumno').val()
+            let nuevoAlumnoNombre    = $('#nombreNuevoAlumno').val()
+            let nuevoAlumnoApellido1 = $('#apellido1NuevoAlumno').val()
+            let nuevoAlumnoApellido2 = $('#apellido2NuevoAlumno').val()
+            let nuevoAlumnoCorreo    = $('#correoNuevoAlumno').val()
+            let nuevoAlumnoCelular   = $('#celularNuevoAlumno').val()
+            let nuevoAlumnoDireccion = $('#direccionNuevoAlumno').val()
+            let apoderadoNombre      = $('#nombreApoderado').val()
+            let apoderadoParentesco  = $('#parentescoApoderado').val()
+            let apoderadoTrabajo     = $('#trabajoApoderado').val()
+            let apoderadoCelular     = $('#celularApoderado').val()
+            let apoderadoCorreo      = $('#correoApoderado').val()
+
+            let validateCounter = 0 // debe llegar a 8
+            let errMsg = '';
+            $('#errMessages').empty();
+
+            if(nuevoAlumnoRut.length > 5) validateCounter++; // 1
+            if(nuevoAlumnoCiudad.length > 1) validateCounter++; // 2
+            if(nuevoAlumnofecha.length > 3) validateCounter++; // 3
+            if(nuevoAlumnoNombre.length >= 1) { //4
+                validateCounter++; 
+            } else {
+                errMsg += '<br> Debe ingresar el nombre del alumno.'
+            }
+
+            if(nuevoAlumnoApellido1.length > 0) { // 5
+                validateCounter++
+            } else {
+                errMsg += '<br> Debe ingresar el apellido paterno del alumno.'
+            }
+
+            if(nuevoAlumnoDireccion.length > 0) { // 6
+                validateCounter++
+            } else {
+                errMsg += '<br> Debe ingresar la dirección del alumno.'
+            }
+
+            if(apoderadoNombre.length > 0) { // 7
+                validateCounter++
+            } else {
+                errMsg += '<br> Debe ingresar el nombre del apoderado del alumno.'
+            }
+            
+            if(apoderadoParentesco.length > 0) { // 8
+                validateCounter++
+            } else {
+                errMsg += '<br> Debe ingresar el parentesco del apoderado.'
+            }
+
+            let img = $('#matrImage').val()
+
+            console.log(img)
+            //fin variables
+
+            if(validateCounter >= 8) {
+                $('#guardarNuevoAlumno2').prop('disabled', true);
+                ajax({
+                    url: '/api/nuevoalumno',
+                    type: 'POST',
+                    data: {
+                        rutalumno:           nuevoAlumnoRut,
+                        ciudadAlumno:        nuevoAlumnoCiudad,
+                        fechaAlumno:         nuevoAlumnofecha,
+                        nombreAlumno:        nuevoAlumnoNombre,
+                        apellido1Alumno:     nuevoAlumnoApellido1,
+                        apellido2Alumno:     nuevoAlumnoApellido2,
+                        correoAlumno:        nuevoAlumnoCorreo,
+                        celularAlumno:       nuevoAlumnoCelular,
+                        direccionAlumno:     nuevoAlumnoDireccion,
+                        nombreApoderado:     apoderadoNombre,
+                        parentescoApoderado: apoderadoParentesco,
+                        trabajoApoderado:    apoderadoTrabajo,
+                        celularApoderado:    apoderadoCelular,
+                        correoApoderado:     apoderadoCorreo
+                    // img:                 img
+                    }
+                }).then(res => {
+                    console.log(res)
+                    if(res.ok) {
+                        screenLog({
+                            id: 'modal_body',
+                            form: 'Nuevo alumno no matriculado',
+                            action: `Se ha agregado el alumno ${nuevoAlumnoNombre} ${nuevoAlumnoApellido1} de rut ${rutFunc(nuevoAlumnoRut)} en {{credentials.place}}`,
+                            type: 'newStudent'
+                        })
+
+                        swal({
+                            title: 'Agregado!',
+                            backdrop: 'static', 
+                            keyboard: false,
+                            text: `El alumno ${res.ok.name} ${res.ok.lastname1} agregado correctamente.`,
+                            type: 'success',
+                            timer: 60000
+                        }).then(result => {
+                            reloadRepairTableAlumnos()
+                            $('#modalEstudiantes').modal('hide')
+                        })
+                    } else {
+                        toastr.warning(res.err)
+                    }	
+                })
+            } else {
+                $('#errMessages').html(`
+                <div class="alert alert-dismissible alert-warning">
+                    <h4 class="alert-heading">Se deben corregir los siguientes errores.</h4>
+                    ${errMsg}
+                </div>
+                `)
+            }
+            
+        })
+    };
+//BOTON ELIMINAR ESTUDIANTE
+$('#EliminarEstudiante').on('click', function () {
+    swal({
+        title: '¿Estás seguro de eliminar el registro?',
+      text: '',
+      type: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Eliminar',
+      cancelButtonText: 'cancelar',
+      confirmButtonClass: 'btn btn-danger',
+      cancelButtonClass: 'btn btn-primary',
+      buttonsStyling: false
+    }).then(function(action) {
+      if (action.value) {
+        ajax({
+          url: '/api/deleteAlumno',
+          type: 'DELETE',
+          data: {
+            estudianteDelete: alumosRowSelectedData._id
+          }  
+        }).then((data) => {
+            console.log(estudianteDelete)
+            if (data.ok) {
+                toastr.success(data.ok); 
+                alumnosRowSelected.remove().draw();
+                $('#enrolledEstudiante').prop('disabled', true);
+                $('#modEstudiante').prop('disabled', true);
+                $('#EliminarEstudiante').prop('disabled', true);
+            }
+        });
+      }
+    });
+})
+$('#modEstudiante').on('click', function () {
+    modEstudiante();
+})
+function modEstudiante() {
+    ajax({
+        url:  'api/getStudent',
+        type: 'POST',
+        data: { rut: alumosRowSelectedData._id }
+    }).then(res=> {
+        console.log(res)
+        let getBirthday = ''
+        let getCity = ''
+        let getName = ''
+        let getLastname1 = ''
+        let getLastname2 = ''
+        let getEmail = ''
+        let getPhone = ''
+        let getAddress = ''
+        let getNameAp = ''
+        let getRelationshipAp = ''
+        let getWorkAp = ''
+        let getPhoneAp = ''
+        let getCorreoAp = ''
+
+        if (res.ok.birthday) getBirthday = res.ok.birthday
+        if (res.ok.city) getCity = res.ok.city
+        if (res.ok.name) getName = res.ok.name
+        if (res.ok.lastname1) getLastname1 = res.ok.lastname1
+        if (res.ok.lastname2) getLastname2 = res.ok.lastname2
+        if (res.ok.email) getEmail = res.ok.email
+        if (res.ok.phone) getPhone = res.ok.phone
+        if (res.ok.address) getAddress = res.ok.address
+        if (res.ok.nameAp) getNameAp = res.ok.nameAp
+        if (res.ok.relationshipAp) getRelationshipAp = res.ok.relationshipAp
+        if (res.ok.workAp) getWorkAp = res.ok.workAp
+        if (res.ok.phoneAp) getPhoneAp = res.ok.phoneAp
+        if (res.ok.emailAp) getCorreoAp = res.ok.emailAp
+
+        $('#modalEstudiantes').modal();
+        $('#modal_title').text('Modificar alumno');
+        $('#modal_body').html(`
+            <div class="card">
+                <div class="card-header"><h5>Datos alumno</h5></div>
+                <div class="card-body row">
+    
+                    <div class="col-md-4">
+                        <label style="float:left;"><i class="fa fa-key" aria-hidden="true"></i> Rut *</label>
+                    <input id="modRut" maxlength="12" type="text" value="${rutFunc(res.ok._id)}" required class="form-control border-input" readOnly>
+                    </div>
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="far fa-calendar"></i> Fecha de nacimiento *</label>
+                        <input id ="modDate" value="${getBirthday}" class="form-control border-input">
+                    </div>
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fas fa-map-marker"></i> Ciudad *</label>
+                        <input id="ciudadNuevoAlumno" type="text"  required class="form-control border-input" value="${getCity}" readOnly>
+                    </div>
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fa fa-user" aria-hidden="true"></i> Nombre *</label>
+                        <input id="modName" type="text" onkeyup="aMays(event, this)" onblur="aMays(event, this)" value="${getName}"  required class="form-control border-input">
+                    </div>
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"> Apellido paterno *</label>
+                        <input id="modLastname1" type="text" onkeyup="aMays(event, this)" onblur="aMays(event, this)" value="${getLastname1}" class="form-control border-input" >
+                    </div>
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;">Apellido materno</label>
+                        <input id="modLastname2" type="text" onkeyup="aMays(event, this)" onblur="aMays(event, this)" value="${getLastname2}"  class="form-control border-input">
+                    </div>
+
+                
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fa fa-envelope" aria-hidden="true"></i> Correo</label>
+                        <input id="modCorreo" type="email" onkeyup="aMinus(event, this)" onblur="aMinus(event, this)" aria-describedby="emailHelp" value="${getEmail}" class="form-control border-input">
+                    </div>
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fas fa-phone-square"></i> Celular</label>
+                        <input id="modPhone" type="text" value="${getPhone}"  class="form-control border-input" >
+                    </div>
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fa fa-home" aria-hidden="true"></i> Dirección *</label>
+                        <input id="modAddress" type="text" onkeyup="aMays(event, this)" onblur="aMays(event, this)" value="${getAddress}" class="form-control border-input">
+                    </div>
+                    <!--
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fas fa-image"></i> Foto alumno</label>
+                        <input type="file"  accept="image/*" class="form-control-file" id="matrImage">
+                    </div>
+                    -->
+                </div>
+            </div>    
+            <div class="card" style="margin-top:3px">
+                    <div class="card-header"><h5>Datos apoderado</h5></div>
+                <div class="card-body row">        
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fas fa-user-tie"></i> Nombre apoderado *</label>
+                        <input id="modNameAp" type="text" onkeyup="aMays(event, this)" onblur="aMays(event, this)" value="${getNameAp}" class="form-control border-input">
+                    </div>
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;">Parentesco *</label>
+                        <input id="modRelationAp" type="text" onkeyup="aMays(event, this)" onblur="aMays(event, this)" value="${getRelationshipAp}" class="form-control border-input">
+                    </div>
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fas fa-building"></i> Lugar de trabajo </label>
+                        <input id="modWork" type="text" onkeyup="aMays(event, this)" onblur="aMays(event, this)" value="${getWorkAp}" class="form-control border-input">
+                    </div>
+
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fas fa-phone-square"></i> Celular</label>
+                        <input id="modPhoneAp" type="text" value="${getPhoneAp}" class="form-control border-input">
+                    </div> 
+                    <div class="col-md-4" style="margin-top:3px;">
+                        <label style="float:left;"><i class="fa fa-envelope"></i> Correo</label>
+                        <input id="modCorreoAp" type="email" onkeyup="aMinus(event, this)" onblur="aMinus(event, this)" value="${getCorreoAp}" class="form-control border-input">
+                    </div> 
+                </div>
+            </div>   
+
+            <div id="errMessages"></div>
+
+            <div class="row"> 
+                    <div class="offset-md-6 col-md-3" style="margin-top:15px;">
+                    <button id="modCancel" class="btn btn-danger btn-block"><i class="fas fa-ban"></i> Cancelar</button>
+                </div>
+                <div class="col-md-3" style="margin-top:15px;">
+                    <button id="modAcept" class="btn btn-primary btn-block"><i class="fas fa-edit"></i> Modificar</button>
+                </div>
+            </div>
+        `)
+
+        $('#modDate').daterangepicker({
+            "locale": {
+                "format": "DD/MM/YYYY",
+                "daysOfWeek": [
+                    "Dom",
+                    "Lun",
+                    "Mar",
+                    "Mie",
+                    "Jue",
+                    "Vie",
+                    "Sab"
+                ],
+                "monthNames": [
+                    "Enero",
+                    "Febrero",
+                    "Marzo",
+                    "Abril",
+                    "Mayo",
+                    "Junio",
+                    "Julio",
+                    "Agosto",
+                    "Septiembre",
+                    "Octubre",
+                    "Noviembre",
+                    "Diciembre"
+                ],
+                "firstDay": 1
+            },
+            drops: "down",
+            singleDatePicker: true,
+            showDropdowns: true
+        });
+
+        $('#modDate').val(getBirthday)
+
+        $('#modCancel').on('click', function () {
+            $('#modalEstudiantes').modal('hide')
+        });
+
+        $('#modAcept').on('click', function () {
+            let mod_date      = $('#modDate').val();
+            let mod_name      = $('#modName').val();
+            let mod_Lastname1 = $('#modLastname1').val();
+            let mod_Lastname2 = $('#modLastname2').val();
+            let mod_correo    = $('#modCorreo').val();
+            let mod_phone     = $('#modPhone').val();
+            let mod_address   = $('#modAddress').val();
+
+            let mod_nameAp    = $('#modNameAp').val();
+            let mod_relationAp= $('#modRelationAp').val();
+            let mod_workAp    = $('#modWork').val();
+            let mod_phoneAp   = $('#modPhoneAp').val();
+            let mod_correoAp  = $('#modCorreoAp').val();
+
+            let validateCounter = 0 // debe llegar a 6
+            let errMsg = '';
+            $('#errMessages').empty();
+
+            if(mod_date.length > 3) validateCounter++; // 1
+            if(mod_name.length > 1) { // 2
+                validateCounter++; 
+            } else {
+                errMsg += '<br> Debe ingresar el nombre del alumno.'
+            }
+
+            if(mod_Lastname1.length > 0) { // 3
+                validateCounter++
+            } else {
+                errMsg += '<br> Debe ingresar el apellido paterno del alumno.'
+            }
+
+            if(mod_address.length > 0) { // 4
+                validateCounter++
+            } else {
+                errMsg += '<br> Debe ingresar la dirección del alumno.'
+            }
+
+            if(mod_nameAp.length > 0) { // 5
+                validateCounter++
+            } else {
+                errMsg += '<br> Debe ingresar el nombre del apoderado del alumno.'
+            }
+            
+            if(mod_relationAp.length > 0) { // 6
+                validateCounter++
+            } else {
+                errMsg += '<br> Debe ingresar el parentesco del apoderado.'
+            }
+            
+            if(validateCounter >= 6) { 
+                ajax({
+                    url: 'api/modStudent',
+                    type: 'POST',
+                    data: {
+                        id: res.ok._id,
+                        birthday: mod_date,
+                        name: mod_name,
+                        lastname1: mod_Lastname1,
+                        lastname2: mod_Lastname2,
+                        email: mod_correo,
+                        phone: mod_phone,
+                        address: mod_address,
+                        nameAp: mod_nameAp,
+                        relationshipAp: mod_relationAp,
+                        workAp: mod_workAp,
+                        phoneAp: mod_phoneAp,
+                        emailAp: mod_correoAp
+                    }
+                }).then(res2 => {
+                    if (res2.error) {
+                        toastr.error(res.error)
+                    } else {
+                        screenLog({
+                            id: 'modal_body',
+                            form: 'Modificar alumno no matriculado',
+                            action: `Se ha modificado el alumno ${mod_name} ${mod_Lastname1} de rut ${rutFunc(res.ok._id)} en {{credentials.place}}`,
+                            type: 'modStudent'
+                        })
+
+                        swal({
+                            title: 'Registro modificado correctamente!',
+                            text: res2.ok,
+                            backdrop: 'static',
+                            keyboard: false,
+                            type: 'success',
+                            timer: 3000
+                        }).then(result => {
+                        // $('#modHorario').prop('disabled', true);
+                            $('#modalEstudiantes').modal('hide')
+                            reloadRepairTableAlumnos()
+                        })
+                    }
+                })
+            } else {
+                $('#errMessages').html(`
+                <div class="alert alert-dismissible alert-warning">
+                    <h4 class="alert-heading">Se deben corregir los siguientes errores.</h4>
+                    ${errMsg}
+                </div>
+                `)
+            }
+                
+        }); 
+    })
+};
+
+function aMays(e, elemento) {
+    tecla=(document.all) ? e.keyCode : e.which; 
+    elemento.value = elemento.value.toUpperCase();
+}
+function aMinus(e, elemento) {
+tecla=(document.all) ? e.keyCode : e.which; 
+ elemento.value = elemento.value.toLowerCase();
+}
+
+
+ // test
+
+</script>
+{{/extend}}
+

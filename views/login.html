@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Cebal</title>
+
+    <link rel="stylesheet" href="/public/css/bootstrap.css"/>
+    <link rel="stylesheet" href="/public/fontawesome/css/fontawesome-all.min.css">
+    
+   
+    <style>
+
+        body {
+            margin: 0;
+            padding: 0;
+            /*  Background fallback in case of IE8 & down, or in case video doens't load, such as with slower connections  */
+            background: #333;
+            background-attachment: fixed;
+            background-size: cover;
+
+            background-image: url("/public/img/fondo.jpg");
+            background-repeat: no-repeat;
+        }
+
+        /* The only rule that matters */
+       
+
+
+         #loginContainer {
+            width:380px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            top: 50%;
+            left: 50%;
+            position: absolute;
+            transform: translate(-50%, -50%);
+            box-sizing: border-box;
+            padding: 40px 30px;
+         }
+         #loginContainer input[type="text"], input[type="password"]{
+             border: none;
+             border-bottom:  1px solid #fff;
+             background:  transparent;
+         }
+         #logo img {
+            max-height: 100%;
+            max-width:100%;
+         }
+                 
+         
+         #forms {
+            margin-left: 20px;
+            margin-right: 20px;
+         }
+
+         .input-group input {
+             color:#1e90ff !important;
+             font-size: 15px !important;
+             text-align: center;
+         }
+         
+    </style>
+</head>
+<body>
+ 
+<div class="container-fluid">
+       
+    <div id="loginContainer">
+        <center>  
+       
+        
+        <h1>Iniciar sesión </h1>
+        <h6>Centro preuniversitario</h6><br>
+        </center>
+        <div class="row"> 
+            <div class="">
+                <center><img src="/public/img/logoB.png" style="margin-top:0px" width="200px" ></center> 
+                <br> 
+                <form method="post" action="/login">
+                    <div id="forms">
+                        <div class="input-group margin-bottom-sm">
+                            <span class="input-group-addon"></span>
+                            <input id="rut" name="username" class="form-control" type="text" placeholder="Rut">
+                        </div><br>
+                        <div class="input-group margin-bottom-sm">
+                            <span class="input-group-addon"></span>
+                            <input id="password" name="password" class="form-control" type="password" placeholder="Contraseña">
+                        </div>
+                        <br>
+                        {{#if message}}
+                        <div class="alert alert-dismissible alert-warning">
+                            <button type="button" class="close" data-dismiss="alert">&times;</button>
+                            {{message}}
+                        </div>
+                        <br>
+                        {{/if}}
+                        <input type="submit" class="btn btn-primary btn-block" value="Login">
+                        <br>
+                        <marquee>©2018 Cebal. Reservados todos los derechos.</marquee>
+                    </div>
+                </form>
+            </div>
+        
+        </div>
+        <div style="background:rgba(255,255,255,0.1); border-radius:10px; padding:10px;">
+            <center>
+                <p>Desarrollado por</p>
+                <img src="/public/img/logo_michcom.png" alt="" style="max-width:150px">
+            </center>
+        </div>
+    </div>
+    
+</div>
+
+<script src="/public/js/bootstrap.min.js"></script>
+<script src="/public/js/jquery.min.js"></script>
+<script src="/public/js/jquery.rut.min.js"></script>
+
+
+<script>
+
+$(document).ready(function(){
+    $('#rut').focus();
+});
+
+String.prototype.capitalize = function() {
+    return this.charAt(0).toUpperCase() + this.slice(1);
+}
+
+const rutFunc = (rut) => {
+    return $.formatRut(rut)
+}
+
+//validar rut 
+$('#rut').on('keyup', function(){
+    let rut  = $('#rut').val()
+    if($.validateRut(rut) && rut.length>5) {
+        $('#rut').val(rutFunc(rut))
+    }
+})
+
+</script>
+</body>
+</html>
