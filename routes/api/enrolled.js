@@ -286,17 +286,23 @@ const Enrolled = [
             let ticket = request.payload.ticket
             let formaPago = request.payload.formaPago
             let cheque
-
+            let abono
+            
             if(request.payload.cheque) {
                 cheque = JSON.parse(request.payload.cheque)
-                console.log(cheque)
+                console.log('CHEQUE', cheque)
+            }
+
+            if(request.payload.abono) {
+                abono = JSON.parse(request.payload.abono)
+                console.log('ABONO', abono)
             }
 
             return new Promise(resolve=> {
                 db.find({ 
-                    "selector": {
-                        '_id': cleanRut(rut),
-                        'type': 'alumnos',
+                    selector: {
+                        _id: cleanRut(rut),
+                        type: 'alumnos',
                     }
                 }, function(err, result) {
                     if (err) throw err;
@@ -329,6 +335,25 @@ const Enrolled = [
                                 return el
                             }         
                         });
+
+                        if(abono) {
+                            if(abono.pending) {
+                                res = res.map((el, i, arr) => {
+                                    if(el.num == abono.pending.num) {
+        
+                                        return {
+                                            num: el.num,
+                                            amount: (abono.pending.quotaTotalAmount - abono.pending.quotaPayedAmount).toString(),
+                                            payday: el.payday,
+                                            status: 'pending'
+                                        }
+                                    } else {
+                                        return el
+                                    }  
+                                })
+                            }
+                        }
+                        
                         
                         console.log(toTicket)
                         let resMonto = toTicket.reduce((numb, el, i)=>{
@@ -336,6 +361,8 @@ const Enrolled = [
                         }, 0) 
                         
                         student.matricula.finance.cuotas = res
+
+                        console.log('CUOTAS!', res)
 
                         crearBoleta({
                             numBoleta: ticket,
@@ -346,6 +373,7 @@ const Enrolled = [
                             formaPago: formaPago, // cash, check, transfer
                             cheque: cheque
                         }).then(res2=> {
+                            console.log('RESCREARBOLETAS', res2)
                             if(res2.ok) {
                                 db.insert(student, function(errUpdate, body) {
                                     if (errUpdate) throw errUpdate;
@@ -371,6 +399,7 @@ const Enrolled = [
               ticket: Joi.string().required(),
               formaPago: Joi.string().required(),
               cheque: Joi.string().allow(''),
+              abono: Joi.string().allow('')
           })
       }
   }

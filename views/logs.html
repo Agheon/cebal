@@ -78,9 +78,10 @@
             url: 'api/users'
         }).then(res =>{
             users = res.reduce((arr, el, i) => {
+                console.log(el)
                 return arr.concat({
-                    id: i,
-                    text: rutFunc(el._id)
+                    id: el._id,
+                    text: `${el.name} ${el.lastname}`
                 })   
             }, []);
         })
@@ -159,7 +160,7 @@
         let p3 = '';
         
         if (filterUser == 1) {
-            p1 = userSelected.toString(); 
+            p1 = userSelected; 
         }
             
         if (filterDate == 1) {
@@ -212,13 +213,11 @@
     }
 
     function showImg(url) {
-		console.log(url);
-		swal({
-    		title: '',
-			html: `<div id="imglog"><img style="max-width:100%; max-height:600px;" src="${url}.jpeg" onerror="onerrorimg()"></div>`,
-			width: '80%',
-			height: '600px'
-		})
+        console.log(url);
+        swal({
+            imageUrl: `${url}.jpeg`,
+            imageAlt: 'A tall image'
+        })
     }
     
     function onerrorimg() {
@@ -243,9 +242,9 @@
                     data: users
                 });
 
-                userSelected = $('#users').select2('data')[0].text // seleccionar primer usuario pro defecto
+                userSelected = $('#users').select2('data')[0].id // seleccionar primer usuario por defecto
                 $('#users').on('change', function(e) { 
-                    userSelected = $('#users').select2('data')[0].text;
+                    userSelected = $('#users').select2('data')[0].id;
                 });
             }else{
                 filterUser = 0;

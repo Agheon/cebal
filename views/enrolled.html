@@ -46,6 +46,11 @@
     border-color:#16a085 !important;
 }
 
+.activedPending {
+    background:rgba(0, 206, 201,1.0) !important;
+    border-color:rgba(0, 206, 201,1.0) !important;
+}
+
 .toRemove {
     background:#ff6b6b !important;
     border-color:#ee5253 !important;
@@ -229,6 +234,8 @@ let selects = {
 }
 let statusBeca = 0 // becado o no becado
 let chequeStatus = 0 // con o sin cheque
+let abonoStatus = 0 // si se está abonando 1 | si no se esta abonando 0
+let abonoData
    
 let place = '{{{credentials.place}}}';
 
@@ -390,16 +397,16 @@ function chargeTableAlumnosDisabled() {
 }
 //DATATABLE FINAL recargar
 function reloadTableAlumnosDisabled() {
-        ajax({
-            url: 'api/studentsDisabled'
-        }).then(res => {
-            if (res.err) {
-                toastr.warning('No existen alumnos matriculados')
-            } else {
-                datatableAlumnosDisabled.clear().draw();
-                datatableAlumnosDisabled.rows.add(res).draw();
-            }
-        })
+    ajax({
+        url: 'api/studentsDisabled'
+    }).then(res => {
+        if (res.err) {
+            toastr.warning('No existen alumnos matriculados')
+        } else {
+            datatableAlumnosDisabled.clear().draw();
+            datatableAlumnosDisabled.rows.add(res).draw();
+        }
+    })
 }
 //XXXXXXXXXX
 //CERRAR MATRICULA
@@ -794,6 +801,10 @@ function modificarEstModal({student, rowSelected, datatableSelected}) {
     discounts()
     ticket()
     values()
+
+    $('.solo-numero').keyup(function (){
+        this.value = (this.value + '').replace(/[^0-9]/g, ''); 
+    });
 
     $('#newEnrolledScience').on('change', function() {
         scienceStatus()
@@ -1221,11 +1232,13 @@ function modificarEstModal({student, rowSelected, datatableSelected}) {
                     console.log(res)
                     if(res.ok) {
 
+                        disableAll()
                         $('#pagosRetired').prop('disabled', true);
                         $('#modStudentRetired').prop('disabled', true);
                         $('#optionStudentRetired').prop('disabled', true);
                         $('#observationsRetired').prop('disabled', true);
                         toastr.success('Alumno modificado correctamente')
+
                         $('#modalEstudiantes').modal('hide')
                         res.ok._id = rutFunc(res.ok._id)
                         res.ok.numMatricula = res.ok.matricula.numMatricula
@@ -2512,6 +2525,8 @@ $('#newEnrolled').on('click', function() {
 
                 if(chequeValidateCounter == 4) {
                     createEnrollment({data: newEnrolledObj, cheque: cheque})
+                } else {
+                    $('#saveNewEnrolled').attr('disabled', false)
                 }
             } else {
                 createEnrollment({data: newEnrolledObj})
@@ -2865,51 +2880,63 @@ function opcionesModal(studentData) {
     `)
     
     $('#certificadoRegular').on('click', function () {
-        var doc = new jsPDF();
+        var doc = new jsPDF({
+            format: 'letter'
+        })
+
         doc.setDrawColor(0, 0, 0);
         doc.setFontSize(16);
         doc.setFontType("bold")
-        doc.text(66,83,"Certificado de alumno regular");
-        doc.line(66, 85, 145, 85);
+        doc.text(90,83,"Certificado");
+        doc.line(89, 85, 121, 85);
         doc.addImage(logoCebal, 'JPEG', 20, 40, 40, 15);
 
         doc.setFontType("normal");
         doc.setFontSize(10);
         doc.text(130,40, moment().format('dddd DD [de] MMMM [de] YYYY'));
+
         doc.setFontSize(12);
-        doc.text(37,100,`   Ricardo Bravo Méndez, rector del centro educacional CEBAL, certifica\nque ${studentData.name} ${studentData.lastname1.trim()} ${studentData.lastname2.trim()}, Rut ${studentData._id} es alumno(a) regular`);
-        doc.text(37,110,`de este centro educacional, en la sede de {{{credentials.place}}}, conforme a matrícula\nN°${studentData.numMatricula}, año ${moment().format('YYYY')}.`);
-        doc.text(37,128,`   Se extiende el presente certificado a petición del interesado, para ser\npresentado en el lugar que estime conveniente.`)
         
+        doc.myText(`Ricardo Bravo Méndez, rector del centro educacional CEBAL, certifica que`, {align: "center"}, 37, 100);
+        doc.myText(`${studentData.name} ${studentData.lastname1.trim()} ${studentData.lastname2.trim()}, Rut ${studentData._id}`, {align: "center"}, 37, 105);
+        doc.myText(`es alumno(a) regular de este centro educacional, en la sede de {{{credentials.place}}},`, {align: "center"}, 37, 110);
+        doc.myText(`conforme a matrícula N°${studentData.numMatricula}, año ${moment().format('YYYY')}.`, {align: "center"}, 37, 115);
+        
+        doc.myText(`Se extiende el presente certificado a petición del interesado`, {align: "center"}, 37, 130);
+        doc.myText(`para ser presentado en el lugar que estime conveniente.`, {align: "center"}, 37, 135);
 
         doc.setFontSize(14);
         doc.setFontType("bold")
-        doc.text(79,250,"Ricardo Bravo Méndez");
-        doc.text(95,257,"Director");
+        //doc.line(89, 85, 121, 85);
+        doc.text(79,230,"Ricardo Bravo Méndez");
+        doc.text(95,237,"Director");
 
 
         doc.setFontType("italic");
         doc.setFontSize(9);
         if (place==='Curicó'){
-            doc.text(35,275,"Dirección: Manuel Montt #358, Curicó - Contacto: contacto@cebal.cl - Fono: 75 2320402 - www.cebal.cl");
+            doc.text(35,250,"Dirección: Manuel Montt #358, Curicó - Contacto: contacto@cebal.cl - Fono: 75 2320402 - www.cebal.cl");
         }else if(place==='Parral'){
-            doc.text(35,275,"Dirección: Urrutia #405, Parral - Contacto: parral@cebal.cl - Fono: 73 2462307 - www.cebal.cl");
+            doc.text(35,250,"Dirección: Urrutia #405, Parral - Contacto: parral@cebal.cl - Fono: 73 2462307 - www.cebal.cl");
         }else if (place==='Linares'){
-            doc.text(35,275,"Dirección: Manuel Rodriguez #315, Linares - Contacto: linares@cebal.cl - Fono: 73 2214675 - www.cebal.cl");
+            doc.text(35,250,"Dirección: Manuel Rodriguez #315, Linares - Contacto: linares@cebal.cl - Fono: 73 2214675 - www.cebal.cl");
         }
-        doc.text(70,280,"Preuniversitario CEBAL - Sólido en P.S.U");
+        doc.text(70,260,"Preuniversitario CEBAL - Sólido en P.S.U");
 
         doc.setFontSize(8)
         doc.setFont('times')
         doc.setFontType('normal')
         doc.setTextColor(100)
-        doc.text(35, 290, `Generado por {{{credentials.name}}}`+` {{{credentials.lastname}}}`)
+        doc.text(35, 270, `Generado por {{{credentials.name}}}`+` {{{credentials.lastname}}}`)
         doc.save(`Certificado alumno regular `+ ` ${studentData.name}.pdf`);
             
     })
 
     $('#printPDF').on('click', function () {
-        var doc = new jsPDF();
+        var doc = new jsPDF({
+            format: 'letter'
+        })
+
         doc.setDrawColor(0, 0, 0);
         doc.setFontSize(16);
         doc.setFontType("bold")
@@ -3054,14 +3081,20 @@ function opcionesModal(studentData) {
         doc.setFontType("italic");
         doc.setFontSize(9);
         if (place==='Curicó'){
-            doc.text(35,275,"Dirección: Manuel Montt #358, Curicó - Contacto: contacto@cebal.cl - Fono: 75 2320402 - www.cebal.cl");
+            doc.text(35,260,"Dirección: Manuel Montt #358, Curicó - Contacto: contacto@cebal.cl - Fono: 75 2320402 - www.cebal.cl");
         }else if(place==='Parral'){
-            doc.text(35,275,"Dirección: Urrutia #405, Parral - Contacto: parral@cebal.cl - Fono: 73 2462307 - www.cebal.cl");
+            doc.text(35,260,"Dirección: Urrutia #405, Parral - Contacto: parral@cebal.cl - Fono: 73 2462307 - www.cebal.cl");
         }else if (place==='Linares'){
-            doc.text(35,275,"Dirección: Manuel Rodriguez #315, Linares - Contacto: linares@cebal.cl - Fono: 73 2214675 - www.cebal.cl");
+            doc.text(35,260,"Dirección: Manuel Rodriguez #315, Linares - Contacto: linares@cebal.cl - Fono: 73 2214675 - www.cebal.cl");
         }
         
-        doc.text(70,280,"Preuniversitario CEBAL - Sólido en P.S.U");
+        doc.text(70,270,"Preuniversitario CEBAL - Sólido en P.S.U");
+        doc.setFontSize(8)
+        doc.setFont('times')
+        doc.setFontType('normal')
+        doc.setTextColor(100)
+        doc.text(35, 275, `Generado por {{{credentials.name}}}`+` {{{credentials.lastname}}}`)
+
         doc.save(`FichaMatricula `+ ` ${studentData.name}.pdf`);
     })
 
@@ -3078,8 +3111,9 @@ $('#pagosRetired').on('click', function(){
 })
 
 function pagosModal(selected_id) {
+    abonoStatus = 0
+    abonoData = null
     //alumnosRowSelectedDataDisabled
-    console.log('enviando pago')
     let cuotasAPagar = []
     let cuotasARemover = []
 
@@ -3191,6 +3225,8 @@ function pagosModal(selected_id) {
                     
 
             <div class="card  mb-12" style="max-width: 50rem;margin-top:10px" >
+                <div id="boletasHTML"></div>
+
                 <div class="card-header"><h5>Acción : 
                     <span>
                         <label class="radio-inline"> <input type="radio" name="season" id="payQuotaOption" value="pay" checked> Pagar </label>
@@ -3213,6 +3249,28 @@ function pagosModal(selected_id) {
                             </a>
                         </div>
                         ${listCuotas}
+                    </div>
+                    <hr>
+                    <div class="row">
+                        
+                        <div class="col-md-12">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="allowAbono">
+                                <label class="custom-control-label" for="allowAbono">¿Desea abonar?</label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-9 col-sm-12 col-xs-12">
+                            <input disabled id="abonoAmount" type="text" class="form-control solo-numero" placeholder="Monto a abonar">
+                        </div>
+                        <div class="col-md-3 col-sm-12 col-xs-12">
+                            <button disabled id="abonoBtn" class="btn btn-dark btn-block">Abonar</button>
+                        </div>
+
+                        <div class="col-md-12">
+                            <br>
+                            <div id="abonoMessage"></div>
+                        </div>
                     </div>
                     
                     <div class="row">
@@ -3247,15 +3305,217 @@ function pagosModal(selected_id) {
             </div>
         `)
 
+        getBoletas(selected_id).then(resBoletas=>{
+            console.log('RESBOLETAS', resBoletas)
+            if(resBoletas.ok) {
+                $('#boletasHTML').html(`
+                <div class="accordion" id="accordionBoletas">
+                    <div class="card">
+                        <div class="card-header" id="headingBoletas">
+                            <h5 class="mb-0">
+                                <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseBoletas" aria-expanded="true" aria-controls="collapseBoletas">
+                                    Todas las Boletas <span class="badge badge-pill badge-primary">${resBoletas.ok.length}</span> <i class="fa fa-angle-double-down"></i>
+                                </button>
+                            </h5>
+                        </div>
+
+                        <div id="collapseBoletas" class="collapse" aria-labelledby="headingBoletas" data-parent="#accordionBoletas">
+                            <div class="card-body table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Fecha de pago</th>
+                                            <th scope="col">N° boleta</th>
+                                            <th scope="col">Cuotas</th>
+                                            <th scope="col">Monto</th>
+                                            <th scope="col">Forma de pago</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="boletasBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `)
+                
+                let boletaHTML = ''
+                _.forEach(resBoletas.ok.sort(compareValues('_id', 'desc')), function(elBoleta) {
+                    let cuotasAfectadas = ''
+                    _.forEach(elBoleta.cuotas, function(elCuota) {
+                        if(elCuota.num == 0) {
+                            cuotasAfectadas += `&nbsp;<span class="badge badge-pill badge-dark">Matrícula: $${number_format(elCuota.monto)}</span>`
+                        } else {
+                            cuotasAfectadas += `&nbsp;<span class="badge badge-pill badge-dark">${elCuota.num}: $${number_format(elCuota.monto)}</span>` 
+                        }
+                        
+                    })
+
+                    boletaHTML += `
+                        <tr>                                      
+                            <td>${moment(elBoleta._id).format('DD/MM/YYYY HH:mm')}</td>
+                            <td>${elBoleta.numBoleta}</td>
+                            <td>${cuotasAfectadas}</td>
+                            <td>$${number_format(elBoleta.monto)}</td>
+                            <td>${elBoleta.formaPago}</td>
+                        </tr>
+                    `
+                })
+
+                $('#boletasBody').html(boletaHTML)
+            }
+        })
+
+        $('#allowAbono').on('change', function() {
+            console.log(cuotasAPagar)
+
+            let thisStatus = $(this).prop('checked')
+            console.log(thisStatus)
+            $('.cuotaPay').removeClass( 'active' )
+            $('.cuotaPay').removeClass( 'actived' )
+            $('.cuotaPay').removeClass( 'activedPending' )
+            $('.cuotaPay').removeClass( 'toRemove' )
+            cuotasAPagar = []
+            cuotasARemover = []
+            $('#abonoMessage').empty()
+            abonoData = null
+
+            if(thisStatus == true) { // abono habilitado
+                $('#abonoAmount').val('')
+                $('#abonoAmount').attr('disabled', false)
+                $('#abonoBtn').attr('disabled', false)
+                abonoStatus = 1
+            } else { // abono deshabilidado
+                $('#abonoAmount').val('')
+                $('#abonoAmount').attr('disabled', true)
+                $('#abonoBtn').attr('disabled', true)
+                abonoStatus = 0
+            }
+        })
+
+        $('#abonoBtn').on('click', function() {
+            let abonoAmount = parseInt($('#abonoAmount').val()) // valor del input de abono
+            let totalAmountQuotasOwed = 0 // monto total adeudado entre las cuotas pendientes
+            let totalPayedAbono = 0 
+            let quotasOwedArray = []
+            
+            _.forEach(res.ok.matricula.finance.cuotas, function(el, index) {
+                if(el.status == 'pending') {
+                    let thisQuota = {
+                        num : el.num
+                    }
+
+                    if(quotasOwedArray.length > 0) {
+                        thisQuota.startAmount = totalAmountQuotasOwed+1
+                    } else {
+                        thisQuota.startAmount = totalAmountQuotasOwed
+                    }
+                    
+                    thisQuota.totalAmount = parseInt(el.amount)
+                    totalAmountQuotasOwed += parseInt(el.amount)
+                    
+                    thisQuota.finalAmount = totalAmountQuotasOwed
+
+                    quotasOwedArray.push(thisQuota)
+
+                }
+            })
+
+            console.log(quotasOwedArray, totalAmountQuotasOwed)
+            
+            if(totalAmountQuotasOwed > 0) { // si es mayor a 0 quiere deir que tiene cuotas pendientes
+                if(Number.isInteger(abonoAmount) && abonoAmount > 0) {
+
+                    if(abonoAmount <= totalAmountQuotasOwed) {
+                        /*LOGICA AQUI*/
+                        $('.cuotaPay').removeClass('active actived activedPending')
+                        let quotasToPay = []
+
+                        _.forEach(quotasOwedArray, function(el) {
+                            if(abonoAmount >= el.startAmount) {
+                                if(abonoAmount >= el.finalAmount) {
+                                    el.statusPay = 'complete'
+
+                                    el.payedAmount = el.totalAmount
+                                    //totalAmountQuotasOwed -= el.totalAmount
+
+                                    totalPayedAbono += el.totalAmount
+                                } else {
+                                    el.statusPay = 'pending'
+                                    totalPayedAbono += el.totalAmount
+                                    el.pendingAmount = totalPayedAbono - abonoAmount
+                                    el.payedAmount = el.totalAmount - el.pendingAmount
+                                }
+
+                                quotasToPay.push(el)
+                            }
+                        })
+
+                        console.log('QUOTASTOPAY', quotasToPay)
+                        
+                        abonoData = {
+                            affectedQuotas: quotasToPay.length,
+                            totalAbono: abonoAmount
+                        }
+
+                        let cuotaMessageHTML = ''
+                        _.forEach(quotasToPay, function(el) {
+                             
+                            if(el.statusPay == 'complete') {
+                                $('#cuota_'+el.num).addClass('active actived')
+                                
+                                cuotaMessageHTML += `
+                                    <b>N° ${el.num}</b> - Monto total: <b>$${number_format(el.totalAmount)} CLP</b> - Monto a pagar: <b>$${number_format(el.payedAmount)} CLP</b> <hr>
+                                `
+                            } else if(el.statusPay == 'pending') {
+                                $('#cuota_'+el.num).addClass('active activedPending')
+                                
+                                abonoData.pending = {
+                                    num: el.num,
+                                    quotaTotalAmount: el.totalAmount,
+                                    quotaPayedAmount: el.payedAmount
+                                }
+
+                                cuotaMessageHTML += `
+                                    <b>N° ${el.num}</b> - Monto total: <b>$${number_format(el.totalAmount)} CLP</b> - Monto a pagar: <b>$${number_format(el.payedAmount)} CLP</b> - Monto pendiente: <b>$${number_format(el.pendingAmount)} CLP</b> <hr>
+                                `
+                            }
+
+                            cuotasAPagar.push(el.num)
+                        })
+
+
+                        $('#abonoMessage').html(`
+                        <div class="alert alert-dismissible alert-primary">
+                            <!--<button type="button" class="close" data-dismiss="alert">&times;</button>-->
+                            Se pagará <b>$${number_format(abonoAmount)} CLP</b> distribuido en <b>${quotasToPay.length}</b> cuotas.
+                            <br>
+                            <h4>Cuotas afectadas:</h4>
+                            ${cuotaMessageHTML}
+                            <br>
+                        </div>
+                        `)
+                    } else {
+                        toastr.warning(`Lo máximo que puede abonar es $${number_format(totalAmountQuotasOwed)}`)
+                    }
+                } else {
+                    toastr.warning(`Lo mínimo que puede abonar es $1`)
+                }
+            } else {
+                toastr.info('El alumno no tiene cuotas pendientes')
+            } 
+        })
+
         $('.solo-numero').keyup(function (){
             this.value = (this.value + '').replace(/[^0-9]/g, ''); 
         });
         
-            $('#cancel').on('click', function () {
-                $('#modalEstudiantes').modal('hide')
-            })
-            //fecha
-            $('#initDate').daterangepicker({
+        $('#cancel').on('click', function () {
+            $('#modalEstudiantes').modal('hide')
+        })
+
+        //fecha
+        $('#initDate').daterangepicker({
             "locale": {
                 "format": "DD/MM/YYYY",
                 "daysOfWeek": [
@@ -3289,50 +3549,53 @@ function pagosModal(selected_id) {
         });
 
         $('.cuotaPay').on('click', function(e){
-            
-            if($('#payQuotaOption').is(':checked')) {
+            if(abonoStatus == 1) {
+                toastr.warning('No se pueden seleccionar cuotas pendientes mientras se está abonando.')
+            } else {
+                if($('#payQuotaOption').is(':checked')) {
                 
-                if(cuotasARemover[0]) {
-                    toastr.warning('Solo se puede realizar 1 acción a la vez (pagar o remover)')
-                } else {
-                    if($('#'+e.currentTarget.id).hasClass('toRemove')) {
-                        toastr.warning('Primero debe remover el estado <b>remover</b> de la cuota seleccionada')
+                    if(cuotasARemover[0]) {
+                        toastr.warning('Solo se puede realizar 1 acción a la vez (pagar o remover)')
                     } else {
-                        $('#'+e.currentTarget.id).toggleClass( 'active' )
-                        $('#'+e.currentTarget.id).toggleClass( 'actived' )
-
-                        if($('#'+e.currentTarget.id).hasClass('active')) {
-                            cuotasAPagar.push(e.currentTarget.id.split('_')[1])
+                        if($('#'+e.currentTarget.id).hasClass('toRemove')) {
+                            toastr.warning('Primero debe remover el estado <b>remover</b> de la cuota seleccionada')
                         } else {
-                            if (cuotasAPagar.indexOf(e.currentTarget.id.split('_')[1]) > -1) {
-                                cuotasAPagar.splice(cuotasAPagar.indexOf(e.currentTarget.id.split('_')[1]), 1);
-                            }
-                        }   
+                            $('#'+e.currentTarget.id).toggleClass( 'active' )
+                            $('#'+e.currentTarget.id).toggleClass( 'actived' )
+
+                            if($('#'+e.currentTarget.id).hasClass('active')) {
+                                cuotasAPagar.push(e.currentTarget.id.split('_')[1])
+                            } else {
+                                if (cuotasAPagar.indexOf(e.currentTarget.id.split('_')[1]) > -1) {
+                                    cuotasAPagar.splice(cuotasAPagar.indexOf(e.currentTarget.id.split('_')[1]), 1);
+                                }
+                            }   
+                        }
                     }
-                }
 
-                
-            } else if($('#removeQuotaOption').is(':checked')) {
+                    
+                } else if($('#removeQuotaOption').is(':checked')) {
 
-                if(cuotasAPagar[0]) {
-                    toastr.warning('Solo se puede realizar 1 acción a la vez (pagar o remover)')
-                } else {
-                    if($('#'+e.currentTarget.id).hasClass('actived')) {
-                        toastr.warning('Primero debe remover el estado <b>pagar</b> de la cuota seleccionada')
+                    if(cuotasAPagar[0]) {
+                        toastr.warning('Solo se puede realizar 1 acción a la vez (pagar o remover)')
                     } else {
-                        $('#'+e.currentTarget.id).toggleClass( 'active' )
-                        $('#'+e.currentTarget.id).toggleClass( 'toRemove' )
-
-                        if($('#'+e.currentTarget.id).hasClass('active')) {
-                            cuotasARemover.push(e.currentTarget.id.split('_')[1])
+                        if($('#'+e.currentTarget.id).hasClass('actived')) {
+                            toastr.warning('Primero debe remover el estado <b>pagar</b> de la cuota seleccionada')
                         } else {
-                            if (cuotasARemover.indexOf(e.currentTarget.id.split('_')[1]) > -1) {
-                                cuotasARemover.splice(cuotasARemover.indexOf(e.currentTarget.id.split('_')[1]), 1);
+                            $('#'+e.currentTarget.id).toggleClass( 'active' )
+                            $('#'+e.currentTarget.id).toggleClass( 'toRemove' )
+
+                            if($('#'+e.currentTarget.id).hasClass('active')) {
+                                cuotasARemover.push(e.currentTarget.id.split('_')[1])
+                            } else {
+                                if (cuotasARemover.indexOf(e.currentTarget.id.split('_')[1]) > -1) {
+                                    cuotasARemover.splice(cuotasARemover.indexOf(e.currentTarget.id.split('_')[1]), 1);
+                                }
                             }
                         }
                     }
+                    
                 }
-                
             }
             console.log(cuotasAPagar, cuotasARemover)
             
@@ -3418,6 +3681,12 @@ function pagosModal(selected_id) {
 
             if(cuotasAPagar[0]) { // falta programar los remover!
                 let cheque = {}
+                let abonoPOST
+                if (abonoData) {
+                   abonoPOST = JSON.stringify(abonoData)
+                } else {
+                    abonoPOST = ''
+                }
 
                 if(chequeStatus == 1) { // si existe cheque
                     let chequeBanco = $('#chequeBanco').val()
@@ -3467,7 +3736,8 @@ function pagosModal(selected_id) {
                                     cuotas: JSON.stringify(cuotasAPagar),
                                     ticket: ticket,
                                     formaPago: boletaFormaPago,
-                                    cheque: JSON.stringify(cheque)
+                                    cheque: JSON.stringify(cheque),
+                                    abono: abonoPOST
                                 }
                             }).then(res2=>{
                                 if(res2.ok) {
@@ -3508,7 +3778,8 @@ function pagosModal(selected_id) {
                     if (ticket == '') {
                         toastr.warning('Debe ingresar un número de boleta para las cuotas a pagar.')
                         $(this).attr('disabled', false);
-                    } else { 
+                    } else {
+                        console.log('ABONO DATA', abonoData)
                         ajax({
                             url: 'api/pagarcuotas',
                             type: 'POST',
@@ -3516,7 +3787,8 @@ function pagosModal(selected_id) {
                                 rut: res.ok._id,
                                 cuotas: JSON.stringify(cuotasAPagar),
                                 ticket: ticket,
-                                formaPago: boletaFormaPago
+                                formaPago: boletaFormaPago,
+                                abono: abonoPOST
                             }
                         }).then(res2=>{
                             if(res2.ok) {
@@ -3596,6 +3868,20 @@ function pagosModal(selected_id) {
     })
     
 };
+
+function getBoletas(selected_id) {
+    return new Promise(resolve=> {
+        ajax({
+            url: 'api/studentTickets',
+            type: 'POST',
+            data: {
+                rut: ktoK(cleanRut(selected_id))
+            }
+        }).then(res=> {
+            resolve(res)
+        })
+    })
+}
 
 function getTicket(ticket) {
     $('#ticketView').remove()
