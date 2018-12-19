@@ -349,20 +349,26 @@ const Enrolled = [
                                         }
                                     } else {
                                         return el
-                                    }  
+                                    }
+                                })
+
+                                toTicket = toTicket.map(el=> {
+                                    if(el.num == abono.pending.num) {
+                                        el.monto = abono.pending.quotaPayedAmount
+                                    }
+
+                                    return el
                                 })
                             }
                         }
-                        
-                        
-                        console.log(toTicket)
+                      
                         let resMonto = toTicket.reduce((numb, el, i)=>{
                             return numb += parseInt(el.monto) 
                         }, 0) 
                         
                         student.matricula.finance.cuotas = res
 
-                        console.log('CUOTAS!', res)
+                        //console.log('CUOTAS!', res)
 
                         crearBoleta({
                             numBoleta: ticket,
@@ -1029,7 +1035,7 @@ function crearBoleta({numBoleta, credentials, rutAlumno, cuotas, monto, formaPag
             if(result.docs[0]) {
                 console.log('YA EXISTE LA BOLETA')
                 resolve({err: "ya existe la boleta "+ numBoleta})
-            }else{
+            } else {
                 console.log('No existe la boleta... creando')
                 let paymentMethod = ''
 

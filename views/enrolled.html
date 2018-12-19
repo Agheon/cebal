@@ -3308,6 +3308,8 @@ function pagosModal(selected_id) {
         getBoletas(selected_id).then(resBoletas=>{
             console.log('RESBOLETAS', resBoletas)
             if(resBoletas.ok) {
+                let finalAmountBoletasPagadas = 0
+
                 $('#boletasHTML').html(`
                 <div class="accordion" id="accordionBoletas">
                     <div class="card">
@@ -3333,6 +3335,8 @@ function pagosModal(selected_id) {
                                     </thead>
                                     <tbody id="boletasBody"></tbody>
                                 </table>
+
+                                <div id="finalAmountBoletasPagadas"></div>
                             </div>
                         </div>
                     </div>
@@ -3360,9 +3364,12 @@ function pagosModal(selected_id) {
                             <td>${elBoleta.formaPago}</td>
                         </tr>
                     `
+
+                    finalAmountBoletasPagadas += parseInt(elBoleta.monto)
                 })
 
                 $('#boletasBody').html(boletaHTML)
+                $('#finalAmountBoletasPagadas').html(`<h1>Total Pagado $${number_format(finalAmountBoletasPagadas)}</h1>`)
             }
         })
 
